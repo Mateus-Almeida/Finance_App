@@ -44,7 +44,7 @@ export class Category {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column({ default: false })
+  @Column({ name: 'is_default', default: false })
   isDefault: boolean;
 
   @CreateDateColumn({ name: 'created_at' })

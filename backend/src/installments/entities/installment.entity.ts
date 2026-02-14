@@ -44,7 +44,7 @@ export class Installment {
   @Column({ name: 'due_year' })
   dueYear: number;
 
-  @Column({ default: false })
+  @Column({ name: 'is_paid', default: false })
   isPaid: boolean;
 
   @Column({ name: 'paid_at', nullable: true })

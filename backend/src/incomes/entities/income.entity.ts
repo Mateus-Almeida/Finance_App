@@ -33,7 +33,7 @@ export class Income {
   @Column()
   year: number;
 
-  @Column({ default: true })
+  @Column({ name: 'is_fixed', default: true })
   isFixed: boolean;
 
   @CreateDateColumn({ name: 'created_at' })

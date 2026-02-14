@@ -46,10 +46,10 @@ export class Transaction {
   @Column()
   year: number;
 
-  @Column({ default: false })
+  @Column({ name: 'is_fixed', default: false })
   isFixed: boolean;
 
-  @Column({ default: false })
+  @Column({ name: 'is_installment', default: false })
   isInstallment: boolean;
 
   @Column({ name: 'total_installments', default: 1 })
