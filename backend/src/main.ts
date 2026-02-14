@@ -51,10 +51,12 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT || 3001;
+  const host = process.env.HOST || 'localhost';
+
   await app.listen(port);
 
-  console.log(`🚀 Finance Tracker Backend rodando na porta ${port}`);
-  console.log(`📚 Documentação da API: http://localhost:${port}/api/docs`);
+  console.log(`🚀 Finance Tracker Backend rodando em http://${host}:${port}`);
+  console.log(`📚 Documentação da API: http://${host}:${port}/api/docs`);
 }
 
 bootstrap();
