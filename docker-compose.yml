@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: finance-tracker-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: finance_tracker
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Salc@2017new
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/database-schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: finance-tracker-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=finance_tracker
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=Salc@2017new
+      - PORT=3001
+      - JWT_SECRET=9fK3vL2xQ8mTzP7aR1wYc6BqH4nD5uE8sJ0kLmN3pX7rT2vW6yZc1QaH9bUfG4
+      - JWT_EXPIRATION=7d
+      - FRONTEND_URL=http://localhost
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: finance-tracker-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      - VITE_API_URL=http://localhost/api
+      - VITE_NODE_ENV=production
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

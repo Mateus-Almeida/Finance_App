@@ -251,9 +251,20 @@ export function Login() {
             </form>
           )}
 
-          <p className="text-center text-sm text-muted-foreground mt-8">
-            Ao usar o Finance Tracker, você concorda com nossos termos de uso
-          </p>
+          <div className="mt-8 pt-6 border-t border-border">
+              <p className="text-xs text-muted-foreground text-center">
+                Desenvolvido por{' '}
+                <a
+                  href="https://github.com/Mateus-Almeida"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline font-medium"
+                >
+                  Mateus-Almeida
+                </a>
+              </p>
+
+          </div>
         </div>
       </div>
     </div>

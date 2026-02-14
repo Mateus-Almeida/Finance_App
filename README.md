@@ -314,6 +314,77 @@ npm run lint
 4. Push para a branch (`git push origin feature/nova-feature`)
 5. Abra um Pull Request
 
+## Docker
+
+### Configuração com Docker Compose
+
+```bash
+# Clone o projeto
+git clone https://github.com/Mateus-Almeida/Finance_App.git
+cd Finance_App
+
+# Iniciar todos os serviços
+docker-compose up -d
+
+# Verificar logs
+docker-compose logs -f
+
+# Parar serviços
+docker-compose down
+```
+
+### Variáveis de Ambiente de Produção
+
+#### Backend (.env.prod)
+```env
+DB_HOST=postgres
+DB_PORT=5432
+DB_NAME=finance_tracker
+DB_USERNAME=postgres
+DB_PASSWORD=sua_senha
+
+PORT=3001
+NODE_ENV=production
+JWT_SECRET=sua_chave_secreta_jwt
+JWT_EXPIRATION=7d
+FRONTEND_URL=http://localhost
+```
+
+#### Frontend (.env.prod)
+```env
+VITE_API_URL=http://localhost/api
+VITE_NODE_ENV=production
+```
+
+### Build Manual
+
+#### Backend
+```bash
+cd backend
+cp .env.prod .env
+docker build -t finance-tracker-backend .
+```
+
+#### Frontend
+```bash
+cd frontend
+cp .env.prod .env
+docker build -t finance-tracker-frontend .
+```
+
+## GitHub Actions
+
+O projeto possui workflows de CI/CD automatizados:
+
+- **Backend**: Executado automaticamente ao fazer push de alterações na pasta `backend/`
+- **Frontend**: Executado automaticamente ao fazer push de alterações na pasta `frontend/`
+
+Os workflows podem ser encontrados em `.github/workflows/`
+
 ## Licença
 
 Este projeto está licenciado sob a licença MIT.
+
+## Autor
+
+Desenvolvido por [Mateus-Almeida](https://github.com/Mateus-Almeida)
