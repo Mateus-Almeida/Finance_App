@@ -1,7 +1,11 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { Login } from '@/pages/Login';
-import { Dashboard } from '@/pages/Dashboard';
+import { Overview } from '@/pages/Overview';
+import { EntriesPage } from '@/pages/Entries';
+import { InstallmentsPage } from '@/pages/InstallmentsPage';
+import { CategoriesPage } from '@/pages/CategoriesPage';
+import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { authService } from '@/services/auth.service';
 
 // ============================================
@@ -36,14 +40,20 @@ function App() {
           }
         />
         <Route
-          path="/dashboard"
+          path="/"
           element={
             <PrivateRoute>
-              <Dashboard />
+              <DashboardLayout />
             </PrivateRoute>
           }
-        />
-        <Route path="/" element={<Navigate to="/dashboard" />} />
+        >
+          <Route path="dashboard" element={<Overview />} />
+          <Route path="entries" element={<EntriesPage />} />
+          <Route path="installments" element={<InstallmentsPage />} />
+          <Route path="categories" element={<CategoriesPage />} />
+          <Route index element={<Navigate to="/dashboard" />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/dashboard" />} />
       </Routes>
     </Router>
   );

@@ -1,504 +1,355 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useMemo, useState } from 'react';
 import {
-  Wallet,
-  LogOut,
-  Plus,
-  TrendingUp,
-  Calendar,
-  User,
-  Layers,
-  PiggyBank,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { authService } from '@/services/auth.service';
-import { useTransactions } from '@/hooks/useTransactions';
-import { useIncomes } from '@/hooks/useIncomes';
-import { useCategories } from '@/hooks/useCategories';
-import { RealityCard } from '@/components/RealityCard';
-import { ProjectionChart } from '@/components/ProjectionChart';
-import { FiftyThirtyTwenty } from '@/components/FiftyThirtyTwenty';
-import { formatCurrency, getCurrentMonth, getCurrentYear, formatMonthYear } from '@/utils/format';
-import { RealityCardData, Installment, Transaction } from '@/types';
-import { StatsCard } from '@/components/dashboard/StatsCard';
-import { CreateTransactionModal } from '@/components/dashboard/CreateTransactionModal';
-import { CreateIncomeModal } from '@/components/dashboard/CreateIncomeModal';
-import { CreateCategoryModal } from '@/components/dashboard/CreateCategoryModal';
-import { UpcomingInstallments } from '@/components/dashboard/UpcomingInstallments';
-import { installmentService } from '@/services/installment.service';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { Card } from '@/components/ui/card';
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+} from 'recharts';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/utils/format';
 
-// ============================================
-// PÁGINA: DASHBOARD PRINCIPAL
-// ============================================
+const palette = ['#7c3aed', '#06b6d4', '#10b981', '#f97316'];
+const sparkColors = {
+  income: '#7c3aed',
+  expense: '#f97316',
+  invest: '#06b6d4',
+  balance: '#10b981',
+};
 
-export function Dashboard() {
-  const navigate = useNavigate();
-  const user = authService.getUser();
+const baseTransactions = [
+  {
+    id: 'tx-1',
+    date: '23 Out',
+    label: 'Spotify Family',
+    type: 'Debit',
+    amount: -34.9,
+  },
+  { id: 'tx-2', date: '23 Out', label: 'Salário CLT', type: 'Revenue', amount: 4200 },
+  { id: 'tx-3', date: '22 Out', label: 'C6 Invest', type: 'Investment', amount: -600 },
+  { id: 'tx-4', date: '22 Out', label: 'Despesa Cartão', type: 'Debit', amount: -980.75 },
+  { id: 'tx-5', date: '21 Out', label: 'Freelancer', type: 'Revenue', amount: 1800 },
+];
 
-  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
-  const [selectedYear, setSelectedYear] = useState(getCurrentYear());
-  const [transactionModalOpen, setTransactionModalOpen] = useState(false);
-  const [incomeModalOpen, setIncomeModalOpen] = useState(false);
-  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
-  const [pendingInstallments, setPendingInstallments] = useState<Installment[]>([]);
-  const [upcomingInstallments, setUpcomingInstallments] = useState<Installment[]>([]);
-  const [installmentsLoading, setInstallmentsLoading] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'transactions' | 'incomes'>('transactions');
-  const [modalSaving, setModalSaving] = useState(false);
+const lineData = [
+  { month: 'Jan', value: 5400 },
+  { month: 'Fev', value: 4900 },
+  { month: 'Mar', value: 5800 },
+  { month: 'Abr', value: 6200 },
+  { month: 'Mai', value: 6100 },
+  { month: 'Jun', value: 6500 },
+];
 
-  const {
-    transactions,
-    summary,
-    projection,
-    isLoading: isLoadingTransactions,
-    fetchTransactions,
-    fetchSummary,
-    fetchProjection,
-    createTransaction,
-  } = useTransactions();
+const sparkIncome = [4.2, 4.5, 4.9, 5.1, 5.2, 5.4];
+const sparkExpense = [2.1, 2.3, 2.2, 2.5, 2.7, 2.6];
+const sparkInvest = [0.8, 1.0, 0.9, 1.2, 1.1, 1.4];
+const sparkBalance = [1.3, 1.4, 1.8, 1.5, 1.9, 2.2];
 
-  const {
-    incomes,
-    totalIncome,
-    isLoading: isLoadingIncomes,
-    fetchIncomes,
-    fetchTotal,
-    createIncome,
-  } = useIncomes();
+const donutData = [
+  { name: 'Receita', value: 5800 },
+  { name: 'Despesa', value: 2900 },
+  { name: 'Investimento', value: 1100 },
+  { name: 'Poupança', value: 800 },
+];
 
-  const {
-    categories,
-    isLoading: isLoadingCategories,
-    fetchCategories,
-    createCategory,
-  } = useCategories();
+const periods = ['Day', 'Week', 'Month', 'Year'];
 
-  const loadInstallments = useCallback(async () => {
-    setInstallmentsLoading(true);
-    try {
-      const [pending, upcoming] = await Promise.all([
-        installmentService.getPending(selectedMonth, selectedYear),
-        installmentService.getUpcoming(5),
-      ]);
-      setPendingInstallments(pending);
-      setUpcomingInstallments(upcoming);
-    } catch (error) {
-      console.error(error);
-      toast.error('Não foi possível carregar as parcelas');
-    } finally {
-      setInstallmentsLoading(false);
-    }
-  }, [selectedMonth, selectedYear]);
-
-  const loadDashboard = useCallback(async () => {
-    setIsSyncing(true);
-    try {
-      await Promise.all([
-        fetchTransactions(selectedMonth, selectedYear),
-        fetchSummary(selectedMonth, selectedYear),
-        fetchProjection(6),
-        fetchIncomes(selectedMonth, selectedYear),
-        fetchTotal(selectedMonth, selectedYear),
-        fetchCategories(),
-        loadInstallments(),
-      ]);
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [
-    fetchTransactions,
-    fetchSummary,
-    fetchProjection,
-    fetchIncomes,
-    fetchTotal,
-    fetchCategories,
-    loadInstallments,
-    selectedMonth,
-    selectedYear,
-  ]);
-
-  useEffect(() => {
-    loadDashboard();
-  }, [loadDashboard]);
-
-  const handleLogout = () => {
-    authService.logout();
-    toast.success('Logout realizado com sucesso!');
-    navigate('/login');
-  };
-
-  const handleCreateTransaction = async (payload: Parameters<typeof createTransaction>[0]) => {
-    try {
-      setModalSaving(true);
-      await createTransaction(payload);
-      toast.success('Transação criada com sucesso');
-      await loadDashboard();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erro ao criar transação');
-      throw error;
-    } finally {
-      setModalSaving(false);
-    }
-  };
-
-  const handleCreateIncome = async (payload: Parameters<typeof createIncome>[0]) => {
-    try {
-      setModalSaving(true);
-      await createIncome(payload);
-      toast.success('Renda registrada');
-      await loadDashboard();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erro ao criar renda');
-      throw error;
-    } finally {
-      setModalSaving(false);
-    }
-  };
-
-  const handleCreateCategory = async (payload: Parameters<typeof createCategory>[0]) => {
-    try {
-      setModalSaving(true);
-      await createCategory(payload);
-      toast.success('Categoria criada');
-      await fetchCategories();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erro ao criar categoria');
-      throw error;
-    } finally {
-      setModalSaving(false);
-    }
-  };
-
-  const handleToggleInstallment = async (installment: Installment) => {
-    try {
-      setInstallmentsLoading(true);
-      if (installment.isPaid) {
-        await installmentService.markAsUnpaid(installment.id);
-        toast.success('Parcela marcada como pendente');
-      } else {
-        await installmentService.markAsPaid(installment.id);
-        toast.success('Parcela paga');
-      }
-      await loadInstallments();
-      await fetchProjection(6);
-    } catch (error) {
-      console.error(error);
-      toast.error('Não foi possível atualizar a parcela');
-    } finally {
-      setInstallmentsLoading(false);
-    }
-  };
-
-  const fixedExpenses = useMemo(
-    () => transactions.filter((transaction) => transaction.isFixed),
-    [transactions],
+export default function Dashboard() {
+  const [period, setPeriod] = useState('Month');
+  const transactions = useMemo(() => baseTransactions, []);
+  const lineTotals = useMemo(
+    () => ({
+      total: lineData[lineData.length - 1].value,
+      trend: '+8,7%',
+    }),
+    [],
   );
-
-  const fixedTotal = useMemo(
-    () =>
-      fixedExpenses.reduce((acc, transaction) => acc + Number(transaction.amount ?? 0), 0),
-    [fixedExpenses],
-  );
-
-  const installmentsTotal = useMemo(
-    () =>
-      pendingInstallments.reduce((acc, installment) => acc + Number(installment.amount ?? 0), 0),
-    [pendingInstallments],
-  );
-
-  const netSalary = totalIncome || 0;
-  const totalCommitments = installmentsTotal + fixedTotal;
-  const availableBalance = netSalary - totalCommitments;
-
-  const realityData: RealityCardData = {
-    netSalary,
-    installmentsTotal,
-    fixedTotal,
-    totalCommitments,
-    availableBalance,
-    pendingInstallmentsCount: pendingInstallments.length,
-    percentageCommitted:
-      netSalary > 0 ? Number(((totalCommitments / netSalary) * 100).toFixed(2)) : 0,
-    percentageAvailable:
-      netSalary > 0 ? Number(((availableBalance / netSalary) * 100).toFixed(2)) : 0,
-  };
-
-  const monthsOptions = Array.from({ length: 12 }, (_, index) => index + 1);
-  const yearsOptions = Array.from({ length: 5 }, (_, index) => getCurrentYear() - 2 + index);
-
-  const isLoading = isSyncing || isLoadingTransactions || isLoadingIncomes || isLoadingCategories;
-
-  const recentTransactions = transactions.slice(0, 5);
-  const recentIncomes = incomes.slice(0, 5);
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-20 border-b bg-card/80 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-primary/10 p-2">
-              <Wallet className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Dashboard financeiro</p>
-              <h1 className="text-xl font-semibold">Finance Tracker</h1>
-            </div>
+    <div className="space-y-8">
+      <header className="flex flex-wrap items-center gap-4 rounded-2xl border bg-gradient-to-br from-muted/60 via-card/70 to-card p-5 shadow-lg shadow-primary/5">
+        <div>
+          <p className="text-xs uppercase tracking-[0.4em] text-muted-foreground">Overview</p>
+          <h1 className="text-2xl font-semibold text-foreground">Controle Financeiro Premium</h1>
+          <p className="text-sm text-muted-foreground">
+            Visualize receita, despesas, investimentos e saldo em um painel único.
+          </p>
+        </div>
+        <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
+          <div className="flex rounded-full border bg-background p-1 text-xs font-medium shadow-inner">
+            {periods.map((label) => (
+              <button
+                key={label}
+                onClick={() => setPeriod(label)}
+                className={cn(
+                  'rounded-full px-3 py-1 transition-all',
+                  period === label
+                    ? 'bg-primary text-primary-foreground shadow'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {label}
+              </button>
+            ))}
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <ThemeToggle />
-            <div className="hidden items-center gap-2 text-sm text-muted-foreground md:flex">
-              <User className="h-4 w-4" />
-              <span>{user?.name}</span>
-            </div>
-            <Button variant="ghost" size="icon" onClick={handleLogout}>
-              <LogOut className="h-5 w-5" />
-            </Button>
-          </div>
+          <Button className="rounded-full shadow-lg shadow-primary/40">Nova Transação</Button>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-8">
-        <section className="flex flex-wrap items-center gap-4 rounded-2xl border bg-card p-4">
-        <div>
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Período</p>
-          <div className="mt-2 flex gap-2">
-            <select
-              className="rounded-md border bg-background px-3 py-2 text-sm"
-              value={selectedMonth}
-              onChange={(event) => setSelectedMonth(Number(event.target.value))}
-            >
-              {monthsOptions.map((month) => (
-                <option key={month} value={month}>
-                  {formatMonthYear(month, selectedYear).split(' ')[0]}
-                </option>
-              ))}
-            </select>
-            <select
-              className="rounded-md border bg-background px-3 py-2 text-sm"
-              value={selectedYear}
-              onChange={(event) => setSelectedYear(Number(event.target.value))}
-            >
-              {yearsOptions.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="flex flex-1 flex-wrap justify-end gap-2">
-          <Button className="gap-2" onClick={() => setTransactionModalOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Nova Transação
-          </Button>
-          <Button variant="outline" className="gap-2" onClick={() => setIncomeModalOpen(true)}>
-            <PiggyBank className="h-4 w-4" />
-            Nova Renda
-          </Button>
-          <Button variant="outline" className="gap-2" onClick={() => setCategoryModalOpen(true)}>
-            <Layers className="h-4 w-4" />
-            Nova Categoria
-          </Button>
-        </div>
-        </section>
-
-        {isLoading ? (
-          <div className="mt-10 flex items-center justify-center">
-            <div className="text-center">
-              <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
-              <p className="mt-4 text-sm text-muted-foreground">Sincronizando dados...</p>
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="col-span-1 lg:col-span-1 bg-gradient-to-b from-card to-muted/40">
+          <CardHeader>
+            <CardTitle>Distribuição mensal</CardTitle>
+            <p className="text-sm text-muted-foreground">Receita vs Despesa vs Investimento</p>
+          </CardHeader>
+          <CardContent className="flex h-[320px] flex-col items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={donutData}
+                  dataKey="value"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={80}
+                  outerRadius={120}
+                  paddingAngle={4}
+                  cornerRadius={8}
+                >
+                  {donutData.map((_, index) => (
+                    <Cell key={index} fill={palette[index % palette.length]} stroke="none" />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value: number) => formatCurrency(value)}
+                  contentStyle={{ borderRadius: 16, borderColor: '#e2e8f0' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute text-center">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Saldo real</p>
+              <p className="text-3xl font-semibold">{formatCurrency(6200)}</p>
             </div>
-          </div>
-        ) : null}
+            <div className="mt-6 grid w-full grid-cols-2 gap-4 text-sm">
+              {donutData.map((segment, index) => (
+                <div key={segment.name} className="flex items-center gap-2">
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: palette[index % palette.length] }}
+                  />
+                  <span className="text-muted-foreground">{segment.name}</span>
+                  <span className="ml-auto font-semibold">{formatCurrency(segment.value)}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-        <section className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatsCard
-            title="Renda líquida"
-            value={formatCurrency(netSalary)}
-            description={`Última atualização: ${formatMonthYear(selectedMonth, selectedYear)}`}
-            icon={<TrendingUp className="h-5 w-5" />}
-          />
-          <StatsCard
-            title="Gastos do mês"
-            value={formatCurrency(summary?.total ?? 0)}
-            description="Total consolidado de despesas"
-            icon={<Wallet className="h-5 w-5" />}
-          />
-          <StatsCard
-            title="Parcelas pendentes"
-            value={formatCurrency(installmentsTotal)}
-            highlight={`${pendingInstallments.length} parcelas`}
-            icon={<Calendar className="h-5 w-5" />}
-          />
-          <StatsCard
-            title="Saldo real"
-            value={formatCurrency(availableBalance)}
-            description="Salário líquido - compromissos"
-            icon={<PiggyBank className="h-5 w-5" />}
-            trend={
-              availableBalance >= 0
-                ? 'Dentro da capacidade de gastos'
-                : 'Atenção! Saldo comprometido'
-            }
-          />
-        </section>
+        <Card className="col-span-1 lg:col-span-2 bg-card/80 backdrop-blur">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Performance mensal</CardTitle>
+              <p className="text-sm text-muted-foreground">Evolução consolidada</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-emerald-500">Tendência</p>
+              <p className="text-2xl font-semibold">
+                {formatCurrency(lineTotals.total)}{' '}
+                <span className="text-sm text-emerald-500">{lineTotals.trend}</span>
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent className="h-[320px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={lineData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,.3)" />
+                <XAxis dataKey="month" stroke="#94a3b8" />
+                <YAxis stroke="#94a3b8" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <Tooltip
+                  formatter={(value: number) => formatCurrency(value)}
+                  contentStyle={{ borderRadius: 16, borderColor: '#e2e8f0' }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#7c3aed"
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: '#7c3aed' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </section>
 
-        <section className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-2">
-          <RealityCard
-            netSalary={realityData.netSalary}
-            installmentsTotal={realityData.installmentsTotal}
-            fixedTotal={realityData.fixedTotal}
-            availableBalance={realityData.availableBalance}
-            pendingInstallmentsCount={realityData.pendingInstallmentsCount}
-            percentageCommitted={realityData.percentageCommitted}
-            percentageAvailable={realityData.percentageAvailable}
-          />
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <SparkCard
+          title="Receita"
+          total={formatCurrency(7200)}
+          trend="+14%"
+          color={sparkColors.income}
+          data={sparkIncome}
+        />
+        <SparkCard
+          title="Despesa"
+          total={formatCurrency(3200)}
+          trend="-4%"
+          color={sparkColors.expense}
+          data={sparkExpense}
+        />
+        <SparkCard
+          title="Investimentos"
+          total={formatCurrency(1200)}
+          trend="+9%"
+          color={sparkColors.invest}
+          data={sparkInvest}
+        />
+        <SparkCard
+          title="Saldo disponível"
+          total={formatCurrency(2100)}
+          trend="+12%"
+          color={sparkColors.balance}
+          data={sparkBalance}
+        />
+      </section>
 
-          {summary ? (
-            <FiftyThirtyTwenty
-              essential={summary.essential}
-              lifestyle={summary.lifestyle}
-              debtsInvestments={summary.debtsInvestments}
-              total={summary.total}
-              netIncome={netSalary}
-            />
-          ) : (
-            <Card className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
-              Registre transações para ver a distribuição 50/30/20.
-            </Card>
-          )}
-        </section>
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="col-span-1 lg:col-span-2 bg-card/95">
+          <CardHeader>
+            <CardTitle>Gastos por período</CardTitle>
+            <p className="text-sm text-muted-foreground">Despesas fixas vs variáveis</p>
+          </CardHeader>
+          <CardContent className="h-[280px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={lineData}>
+                <defs>
+                  <linearGradient id="colorFixed" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorVariable" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,.3)" />
+                <XAxis dataKey="month" stroke="#94a3b8" />
+                <YAxis stroke="#94a3b8" />
+                <Tooltip
+                  contentStyle={{ borderRadius: 16, borderColor: '#e2e8f0' }}
+                  formatter={(value: number) => formatCurrency(value)}
+                />
+                <Area type="monotone" dataKey="value" stroke="#7c3aed" fill="url(#colorFixed)" />
+                <Area type="monotone" dataKey="value" stroke="#f97316" fill="url(#colorVariable)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-        <section className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            {projection.length > 0 ? (
-              <ProjectionChart data={projection} />
-            ) : (
-              <Card className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
-                Registre mais transações para visualizar a projeção dos próximos meses.
-              </Card>
-            )}
-          </div>
-          <UpcomingInstallments
-            installments={upcomingInstallments}
-            onTogglePayment={handleToggleInstallment}
-            isLoading={installmentsLoading}
-          />
-        </section>
-
-        <section className="mt-10 rounded-2xl border bg-card p-5">
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)}>
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-semibold">Movimentações recentes</h3>
-                <p className="text-sm text-muted-foreground">
-                  Acompanhe os últimos lançamentos e seus impactos.
-                </p>
+        <Card className="col-span-1 bg-card/95">
+          <CardHeader>
+            <CardTitle>Transações recentes</CardTitle>
+            <p className="text-sm text-muted-foreground">Atualizado automaticamente</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {transactions.map((transaction) => (
+              <div
+                key={transaction.id}
+                className="rounded-2xl border bg-muted/40 px-4 py-3 transition hover:-translate-y-0.5 hover:bg-muted"
+              >
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{transaction.date}</span>
+                  <span
+                    className={cn(
+                      'rounded-full px-2 py-0.5 text-[11px] font-semibold',
+                      transaction.type === 'Revenue'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : transaction.type === 'Investment'
+                        ? 'bg-sky-100 text-sky-700'
+                        : 'bg-rose-100 text-rose-700',
+                    )}
+                  >
+                    {transaction.type}
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <p className="text-sm font-semibold text-foreground">{transaction.label}</p>
+                  <p
+                    className={cn(
+                      'text-sm font-semibold',
+                      transaction.amount >= 0 ? 'text-emerald-500' : 'text-rose-500',
+                    )}
+                  >
+                    {transaction.amount >= 0 ? '+' : '-'}
+                    {formatCurrency(Math.abs(transaction.amount))}
+                  </p>
+                </div>
               </div>
-              <TabsList>
-                <TabsTrigger value="transactions">Despesas</TabsTrigger>
-                <TabsTrigger value="incomes">Rendas</TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="transactions" className="mt-4">
-              {recentTransactions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Você ainda não registrou transações neste período.
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-muted-foreground">
-                        <th className="px-3 py-2">Descrição</th>
-                        <th className="px-3 py-2">Categoria</th>
-                        <th className="px-3 py-2">Valor</th>
-                        <th className="px-3 py-2">Tipo</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recentTransactions.map((transaction: Transaction) => (
-                        <tr key={transaction.id} className="border-t">
-                          <td className="px-3 py-2 font-medium">{transaction.description}</td>
-                          <td className="px-3 py-2">
-                            {transaction.category?.name ?? 'Sem categoria'}
-                          </td>
-                          <td className="px-3 py-2">{formatCurrency(Number(transaction.amount))}</td>
-                          <td className="px-3 py-2 text-xs text-muted-foreground">
-                            {transaction.isInstallment
-                              ? 'Parcelado'
-                              : transaction.isFixed
-                                ? 'Fixo'
-                                : 'Avulso'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="incomes" className="mt-4">
-              {recentIncomes.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Nenhuma renda registrada para o período selecionado.
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-muted-foreground">
-                        <th className="px-3 py-2">Descrição</th>
-                        <th className="px-3 py-2">Valor</th>
-                        <th className="px-3 py-2">Tipo</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recentIncomes.map((income) => (
-                        <tr key={income.id} className="border-t">
-                          <td className="px-3 py-2 font-medium">{income.description}</td>
-                          <td className="px-3 py-2">{formatCurrency(Number(income.amount))}</td>
-                          <td className="px-3 py-2 text-xs text-muted-foreground">
-                            {income.isFixed ? 'Fixa' : 'Variável'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </section>
-      </main>
-
-      <CreateTransactionModal
-        open={transactionModalOpen}
-        onClose={() => setTransactionModalOpen(false)}
-        categories={categories}
-        onSubmit={handleCreateTransaction}
-        isSubmitting={modalSaving}
-      />
-      <CreateIncomeModal
-        open={incomeModalOpen}
-        onClose={() => setIncomeModalOpen(false)}
-        onSubmit={handleCreateIncome}
-        isSubmitting={modalSaving}
-      />
-      <CreateCategoryModal
-        open={categoryModalOpen}
-        onClose={() => setCategoryModalOpen(false)}
-        onSubmit={handleCreateCategory}
-        isSubmitting={modalSaving}
-      />
+            ))}
+          </CardContent>
+        </Card>
+      </section>
     </div>
+  );
+}
+
+function SparkCard({
+  title,
+  total,
+  trend,
+  color,
+  data,
+}: {
+  title: string;
+  total: string;
+  trend: string;
+  color: string;
+  data: number[];
+}) {
+  const chartData = data.map((value, index) => ({ idx: index, value }));
+  return (
+    <Card className="bg-card/80 shadow-lg shadow-primary/5">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <p>{title}</p>
+          <span className={cn('text-xs font-semibold', trend.startsWith('-') ? 'text-rose-500' : 'text-emerald-500')}>
+            {trend}
+          </span>
+        </div>
+        <CardTitle className="text-3xl">{total}</CardTitle>
+      </CardHeader>
+      <CardContent className="h-24">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData}>
+            <defs>
+              <linearGradient id={`spark-${title}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={color} stopOpacity={0.4} />
+                <stop offset="95%" stopColor={color} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <Tooltip
+              formatter={(value: number) => formatCurrency(value * 1000)}
+              contentStyle={{ borderRadius: 12, borderColor: '#e5e7eb' }}
+            />
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke={color}
+              strokeWidth={2}
+              fill={`url(#spark-${title})`}
+              className="duration-300"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
   );
 }

@@ -40,8 +40,8 @@ export function ProjectionChart({ data }: ProjectionChartProps) {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-3 border rounded-lg shadow-lg">
-          <p className="font-semibold mb-2">{label}</p>
+        <div className="rounded-lg border border-border bg-card p-3 shadow-lg">
+          <p className="mb-2 font-semibold">{label}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
               {entry.name}: {formatCurrency(entry.value)}
@@ -111,32 +111,32 @@ export function ProjectionChart({ data }: ProjectionChartProps) {
 
         {/* Resumo */}
         <div className="mt-4 grid grid-cols-3 gap-4">
-          <div className="text-center p-3 bg-orange-50 rounded-lg">
-            <p className="text-xs text-orange-600 mb-1">Total Parcelas</p>
-            <p className="text-sm font-semibold text-orange-700">
+          <div className="rounded-lg bg-orange-500/10 p-3 text-center">
+            <p className="mb-1 text-xs text-orange-500">Total Parcelas</p>
+            <p className="text-sm font-semibold text-orange-600">
               {formatCurrency(
                 data.reduce((sum, item) => sum + item.installmentTotal, 0) / data.length
               )}
             </p>
-            <p className="text-xs text-orange-500">média/mês</p>
+            <p className="text-xs text-orange-500/80">média/mês</p>
           </div>
-          <div className="text-center p-3 bg-blue-50 rounded-lg">
-            <p className="text-xs text-blue-600 mb-1">Total Fixas</p>
-            <p className="text-sm font-semibold text-blue-700">
+          <div className="rounded-lg bg-blue-500/10 p-3 text-center">
+            <p className="mb-1 text-xs text-blue-500">Total Fixas</p>
+            <p className="text-sm font-semibold text-blue-600">
               {formatCurrency(
                 data.reduce((sum, item) => sum + item.fixedTotal, 0) / data.length
               )}
             </p>
-            <p className="text-xs text-blue-500">média/mês</p>
+            <p className="text-xs text-blue-500/80">média/mês</p>
           </div>
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-600 mb-1">Total Geral</p>
-            <p className="text-sm font-semibold text-gray-700">
+          <div className="rounded-lg bg-emerald-500/10 p-3 text-center">
+            <p className="mb-1 text-xs text-emerald-500">Total Geral</p>
+            <p className="text-sm font-semibold text-emerald-600">
               {formatCurrency(
                 data.reduce((sum, item) => sum + item.total, 0) / data.length
               )}
             </p>
-            <p className="text-xs text-gray-500">média/mês</p>
+            <p className="text-xs text-emerald-500/80">média/mês</p>
           </div>
         </div>
       </CardContent>
