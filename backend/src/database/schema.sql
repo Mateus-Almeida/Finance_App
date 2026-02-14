@@ -68,6 +68,7 @@ CREATE TABLE transactions (
     is_installment BOOLEAN DEFAULT false,
     total_installments INTEGER DEFAULT 1,
     installment_group_id UUID,
+    is_paid BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
