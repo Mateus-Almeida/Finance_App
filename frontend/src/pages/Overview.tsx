@@ -39,15 +39,6 @@ import { Installment, CategoryType, Transaction, Income } from '@/types';
 import { useTheme } from '@/theme';
 import { toast } from 'sonner';
 
-const timeframeOptions = [
-  { key: 'day', label: 'Dia', months: 1, helper: 'Últimos 30 dias' },
-  { key: 'week', label: 'Semana', months: 3, helper: 'Últimas 8 semanas' },
-  { key: 'month', label: 'Mês', months: 6, helper: 'Últimos 6 meses' },
-  { key: 'year', label: 'Ano', months: 12, helper: 'Últimos 12 meses' },
-] as const;
-
-type TimeframeKey = (typeof timeframeOptions)[number]['key'];
-
 const donutPalette = ['#7c3aed', '#22d3ee', '#10b981', '#f97316'];
 const areaColors = {
   fixed: '#6366f1',
@@ -60,17 +51,13 @@ export function Overview() {
 
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const [selectedYear, setSelectedYear] = useState(getCurrentYear());
-  const [timeframe, setTimeframe] = useState<TimeframeKey>('year');
   const [showFullYear, setShowFullYear] = useState(true);
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [isLoadingInstallments, setLoadingInstallments] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [focusedLabel, setFocusedLabel] = useState<string | null>(null);
 
-  const timeframeConfig = useMemo(
-    () => timeframeOptions.find((option) => option.key === timeframe)!,
-    [timeframe],
-  );
+  const monthsToFetch = showFullYear ? 12 : 6;
 
   const {
     transactions,
@@ -93,7 +80,6 @@ export function Overview() {
   const loadInstallments = useCallback(async () => {
     setLoadingInstallments(true);
     try {
-      const monthsToFetch = timeframe === 'year' ? 12 : 6;
       const data = await installmentService.getUpcoming(monthsToFetch);
       setInstallments(data);
     } catch (error) {
@@ -101,7 +87,7 @@ export function Overview() {
     } finally {
       setLoadingInstallments(false);
     }
-  }, [timeframe]);
+  }, [monthsToFetch]);
 
   const loadOverview = useCallback(async () => {
     setIsSyncing(true);
@@ -111,7 +97,7 @@ export function Overview() {
       await Promise.all([
         fetchTransactions(isYearView ? undefined : selectedMonth, isYearView ? undefined : selectedYear),
         fetchSummary(selectedMonth, selectedYear),
-        fetchProjection(timeframeConfig.months),
+        fetchProjection(monthsToFetch),
         fetchIncomes(isYearView ? undefined : selectedMonth, isYearView ? undefined : selectedYear),
         fetchTotal(selectedMonth, selectedYear),
         loadInstallments(),
@@ -128,7 +114,7 @@ export function Overview() {
     loadInstallments,
     selectedMonth,
     selectedYear,
-    timeframeConfig.months,
+    monthsToFetch,
     showFullYear,
   ]);
 
@@ -142,27 +128,108 @@ export function Overview() {
     }
     return totalIncome || 0;
   }, [showFullYear, incomes, totalIncome]);
+
+  const totalExpenses = useMemo(() => {
+    if (showFullYear) {
+      return transactions.reduce((sum, t) => sum + Math.abs(Number(t.amount ?? 0)), 0);
+    }
+    return summary?.total ?? 0;
+  }, [showFullYear, transactions, summary]);
+
   const fixedExpenses = useMemo(
     () => transactions.filter((transaction) => transaction.isFixed),
     [transactions],
   );
-  const fixedTotal = fixedExpenses.reduce((sum, entry) => sum + Number(entry.amount ?? 0), 0);
-  const installmentsTotal = installments.reduce((sum, installment) => sum + Number(installment.amount ?? 0), 0);
-  const totalExpenses = summary?.total ?? 0;
+  
+  const fixedTotal = useMemo(() => {
+    if (showFullYear) {
+      return fixedExpenses.reduce((sum, entry) => sum + Number(entry.amount ?? 0), 0);
+    }
+    return fixedExpenses.reduce((sum, entry) => sum + Number(entry.amount ?? 0), 0);
+  }, [showFullYear, fixedExpenses]);
+
+  const installmentsTotal = useMemo(() => {
+    if (showFullYear) {
+      return installments.reduce((sum, inst) => sum + Number(inst.amount ?? 0), 0);
+    }
+    return installments.reduce((sum, inst) => sum + Number(inst.amount ?? 0), 0);
+  }, [showFullYear, installments]);
+
   const totalCommitments = fixedTotal + installmentsTotal;
   const availableBalance = netSalary - totalCommitments;
 
+  const investmentsTotal = useMemo(() => {
+    if (showFullYear) {
+      return transactions
+        .filter((t) => t.category?.type === CategoryType.DEBTS_INVESTMENTS)
+        .reduce((sum, t) => sum + Math.abs(Number(t.amount ?? 0)), 0);
+    }
+    return summary?.debtsInvestments.total ?? 0;
+  }, [showFullYear, transactions, summary]);
+
   const donutData = useMemo(() => {
     const data = [
-      { name: 'Receita', value: Math.max(netSalary, 0) },
+      { name: 'Receitas', value: Math.max(netSalary, 0) },
       { name: 'Despesas', value: Math.max(totalExpenses, 0) },
-      { name: 'Investimentos', value: summary?.debtsInvestments.total ?? 0 },
-      { name: 'Poupança', value: Math.max(availableBalance, 0) },
+      { name: 'Dívidas & Invest.', value: investmentsTotal },
+      { name: 'Saldo', value: Math.max(availableBalance, 0) },
     ];
     return data.filter((item) => item.value > 0);
-  }, [availableBalance, netSalary, summary?.debtsInvestments.total, totalExpenses]);
+  }, [availableBalance, netSalary, investmentsTotal, totalExpenses]);
 
   const monthlyLineSeries = useMemo(() => {
+    if (showFullYear) {
+      const monthlyData = new Map<string, { total: number; fixed: number; installments: number }>();
+      
+      transactions.forEach((t) => {
+        const key = `${t.year}-${String(t.month).padStart(2, '0')}`;
+        const existing = monthlyData.get(key) || { total: 0, fixed: 0, installments: 0 };
+        
+        if (t.isInstallment) {
+          existing.installments += Math.abs(Number(t.amount));
+        } else if (t.isFixed) {
+          existing.fixed += Math.abs(Number(t.amount));
+        } else {
+          existing.total += Math.abs(Number(t.amount));
+        }
+        
+        monthlyData.set(key, existing);
+      });
+      
+      installments.forEach((inst) => {
+        const key = `${inst.dueYear}-${String(inst.dueMonth).padStart(2, '0')}`;
+        const existing = monthlyData.get(key) || { total: 0, fixed: 0, installments: 0 };
+        existing.installments += Math.abs(Number(inst.amount));
+        monthlyData.set(key, existing);
+      });
+
+      const months = Array.from(monthlyData.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, values]) => ({
+          key,
+          label: key.split('-')[1] + '/' + key.split('-')[0].slice(2),
+          month: parseInt(key.split('-')[1]),
+          year: parseInt(key.split('-')[0]),
+          total: values.total + values.fixed + values.installments,
+          fixed: values.fixed,
+          installments: values.installments,
+        }));
+
+      if (months.length === 0) {
+        return [{
+          key: `${selectedYear}-01`,
+          label: 'Jan',
+          month: 1,
+          year: selectedYear,
+          total: totalExpenses,
+          fixed: fixedTotal,
+          installments: installmentsTotal,
+        }];
+      }
+      
+      return months;
+    }
+    
     if (projection.length > 0) {
       return projection.map((item) => ({
         key: `${item.year}-${String(item.month).padStart(2, '0')}`,
@@ -185,7 +252,7 @@ export function Overview() {
         installments: installmentsTotal,
       },
     ];
-  }, [projection, fixedTotal, installmentsTotal, selectedMonth, selectedYear, totalExpenses]);
+  }, [showFullYear, projection, transactions, installments, fixedTotal, installmentsTotal, totalExpenses, selectedMonth, selectedYear]);
 
   useEffect(() => {
     if (!focusedLabel && monthlyLineSeries.length) {
@@ -221,46 +288,67 @@ export function Overview() {
 
   const metricCards = [
     {
-      title: 'Receita',
+      title: 'Receitas',
       total: netSalary,
       series: incomesTrend.length ? incomesTrend : balanceTrend,
-      color: '#7c3aed',
+      color: '#22c55e',
       icon: <TrendingUp className="h-4 w-4" />,
     },
     {
-      title: 'Despesa',
+      title: 'Despesas',
       total: totalExpenses,
       series: expenseTrend,
-      color: '#fb7185',
+      color: '#ef4444',
       icon: <Wallet className="h-4 w-4" />,
     },
     {
-      title: 'Investimentos',
-      total: summary?.debtsInvestments.total ?? 0,
+      title: 'Dívidas & Invest.',
+      total: investmentsTotal,
       series: investmentsTrend.length ? investmentsTrend : expenseTrend,
-      color: '#06b6d4',
+      color: '#3b82f6',
       icon: <PieChartIcon className="h-4 w-4" />,
     },
     {
-      title: 'Saldo disponível',
+      title: 'Saldo',
       total: availableBalance,
       series: balanceTrend,
-      color: '#10b981',
+      color: '#a855f7',
       icon: <LineChartIcon className="h-4 w-4" />,
     },
   ];
 
   const totalsBarData = useMemo(
     () => [
-      { label: 'Recebido', value: netSalary, color: '#22c55e' },
-      { label: 'Gasto', value: totalExpenses, color: '#ef4444' },
-      { label: 'Investido', value: summary?.debtsInvestments.total ?? 0, color: '#3b82f6' },
-      { label: 'Disponível', value: availableBalance, color: '#a855f7' },
+      { label: 'Receitas', value: netSalary, color: '#22c55e' },
+      { label: 'Despesas', value: totalExpenses, color: '#ef4444' },
+      { label: 'Dívidas & Invest.', value: investmentsTotal, color: '#3b82f6' },
+      { label: 'Saldo', value: availableBalance, color: '#a855f7' },
     ],
-    [availableBalance, netSalary, summary?.debtsInvestments.total, totalExpenses],
+    [availableBalance, netSalary, investmentsTotal, totalExpenses],
   );
 
   const categoryBarData = useMemo(() => {
+    if (showFullYear) {
+      const essential = transactions
+        .filter((t) => t.category?.type === CategoryType.ESSENTIAL)
+        .reduce((sum, t) => sum + Math.abs(Number(t.amount ?? 0)), 0);
+      const lifestyle = transactions
+        .filter((t) => t.category?.type === CategoryType.LIFESTYLE)
+        .reduce((sum, t) => sum + Math.abs(Number(t.amount ?? 0)), 0);
+      const debtsInvest = transactions
+        .filter((t) => t.category?.type === CategoryType.DEBTS_INVESTMENTS)
+        .reduce((sum, t) => sum + Math.abs(Number(t.amount ?? 0)), 0);
+      
+      const total = essential + lifestyle + debtsInvest;
+      if (total === 0) return [];
+      
+      return [
+        { label: 'Essencial', value: essential, percentage: (essential / total) * 100, color: '#8b5cf6' },
+        { label: 'Estilo de Vida', value: lifestyle, percentage: (lifestyle / total) * 100, color: '#06b6d4' },
+        { label: 'Dívidas & Invest.', value: debtsInvest, percentage: (debtsInvest / total) * 100, color: '#f97316' },
+      ];
+    }
+    
     if (!summary) return [];
     return [
       {
@@ -282,7 +370,7 @@ export function Overview() {
         color: '#f97316',
       },
     ];
-  }, [summary]);
+  }, [showFullYear, summary, transactions]);
 
   const transactionsTimeline = useMemo(() => groupTransactions(transactions), [transactions]);
 
@@ -347,22 +435,6 @@ export function Overview() {
             <h1 className="text-3xl font-semibold text-foreground">Controle Financeiro</h1>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="flex rounded-full border bg-background p-1 text-xs font-semibold shadow-inner">
-              {timeframeOptions.map((option) => (
-                <button
-                  key={option.key}
-                  className={cn(
-                    'rounded-full px-4 py-1 transition',
-                    timeframe === option.key
-                      ? 'bg-primary text-primary-foreground shadow-md'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                  onClick={() => setTimeframe(option.key)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
             <Button className="gap-2 rounded-full px-6" onClick={() => navigate('/entries')}>
               <Sparkles className="h-4 w-4" />
               Registrar lançamento
@@ -411,7 +483,7 @@ export function Overview() {
           
           <p className="flex items-center gap-2 rounded-2xl border bg-background px-3 py-2">
             <LineChartIcon className="h-4 w-4" />
-            {timeframeConfig.helper}
+            {showFullYear ? 'Visão anual' : 'Visão mensal'}
           </p>
         </div>
       </header>
@@ -566,10 +638,10 @@ function DonutDistributionCard({ data, balance }: { data: { name: string; value:
     <Card className="rounded-[32px] border bg-card/80 shadow-xl shadow-primary/10">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-          <PieChartIcon className="h-5 w-5 text-primary" /> Distribuição mensal
+          <PieChartIcon className="h-5 w-5 text-primary" /> Distribuição
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Receita vs despesas vs investimentos, com saldo real no centro.
+          Resumo das receitas, despesas e saldo do período
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -597,9 +669,8 @@ function DonutDistributionCard({ data, balance }: { data: { name: string; value:
             </PieChart>
           </ResponsiveContainer>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Saldo real</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Saldo</p>
             <p className="text-3xl font-semibold">{formatCurrency(balance)}</p>
-            <span className="text-xs text-muted-foreground">Disponível após compromissos</span>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3 text-sm">

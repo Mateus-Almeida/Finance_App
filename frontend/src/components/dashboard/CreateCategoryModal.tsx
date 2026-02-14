@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { CategoryType } from '@/types';
+import { useState, useEffect } from 'react';
+import { Category, CategoryType } from '@/types';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +13,7 @@ interface CreateCategoryModalProps {
     void
   >;
   isSubmitting: boolean;
+  editCategory?: Category | null;
 }
 
 const CATEGORY_OPTIONS = [
@@ -26,6 +27,7 @@ export function CreateCategoryModal({
   onClose,
   onSubmit,
   isSubmitting,
+  editCategory,
 }: CreateCategoryModalProps) {
   const [form, setForm] = useState({
     name: '',
@@ -33,6 +35,19 @@ export function CreateCategoryModal({
     color: '#0ea5e9',
     icon: '',
   });
+
+  const isEditing = !!editCategory;
+
+  useEffect(() => {
+    if (editCategory) {
+      setForm({
+        name: editCategory.name,
+        type: editCategory.type,
+        color: editCategory.color || '#0ea5e9',
+        icon: editCategory.icon || '',
+      });
+    }
+  }, [editCategory]);
 
   const handleSubmit = async () => {
     if (!form.name.trim()) {
@@ -49,15 +64,25 @@ export function CreateCategoryModal({
     onClose();
   };
 
+  const handleOpenChange = () => {
+    setForm({
+      name: '',
+      type: CategoryType.ESSENTIAL,
+      color: '#0ea5e9',
+      icon: '',
+    });
+    onClose();
+  };
+
   return (
     <Modal
       open={open}
-      onClose={onClose}
-      title="Criar categoria"
-      description="Organize seus gastos dentro da metodologia 50/30/20."
+      onClose={handleOpenChange}
+      title={isEditing ? 'Editar categoria' : 'Nova categoria'}
+      description={isEditing ? 'Atualize os dados da categoria.' : 'Organize seus gastos dentro da metodologia 50/30/20.'}
       footer={
         <Button onClick={handleSubmit} disabled={isSubmitting}>
-          {isSubmitting ? 'Salvando...' : 'Salvar'}
+          {isSubmitting ? 'Salvando...' : isEditing ? 'Atualizar' : 'Salvar'}
         </Button>
       }
     >
