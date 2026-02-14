@@ -15,6 +15,8 @@ export interface CreateTransactionData {
   isFixed?: boolean;
   isInstallment?: boolean;
   totalInstallments?: number;
+  repeatMonthly?: boolean;
+  repeatMonths?: number;
 }
 
 export const transactionService = {

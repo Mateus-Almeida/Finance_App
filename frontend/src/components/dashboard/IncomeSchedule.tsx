@@ -5,7 +5,7 @@ import { Trash2 } from 'lucide-react';
 
 interface IncomeScheduleProps {
   incomes: Income[];
-  onDelete: (id: string) => Promise<void>;
+  onDelete: (id: string, description: string) => void;
 }
 
 export function IncomeSchedule({ incomes, onDelete }: IncomeScheduleProps) {
@@ -49,7 +49,7 @@ export function IncomeSchedule({ incomes, onDelete }: IncomeScheduleProps) {
                 variant="ghost"
                 size="icon"
                 className="text-muted-foreground hover:text-destructive"
-                onClick={() => onDelete(income.id)}
+                onClick={() => onDelete(income.id, income.description)}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

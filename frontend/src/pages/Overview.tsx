@@ -60,7 +60,8 @@ export function Overview() {
 
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const [selectedYear, setSelectedYear] = useState(getCurrentYear());
-  const [timeframe, setTimeframe] = useState<TimeframeKey>('month');
+  const [timeframe, setTimeframe] = useState<TimeframeKey>('year');
+  const [showFullYear, setShowFullYear] = useState(true);
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [isLoadingInstallments, setLoadingInstallments] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -92,23 +93,26 @@ export function Overview() {
   const loadInstallments = useCallback(async () => {
     setLoadingInstallments(true);
     try {
-      const data = await installmentService.getUpcoming(6);
+      const monthsToFetch = timeframe === 'year' ? 12 : 6;
+      const data = await installmentService.getUpcoming(monthsToFetch);
       setInstallments(data);
     } catch (error) {
       console.error(error);
     } finally {
       setLoadingInstallments(false);
     }
-  }, []);
+  }, [timeframe]);
 
   const loadOverview = useCallback(async () => {
     setIsSyncing(true);
     try {
+      const isYearView = showFullYear;
+      
       await Promise.all([
-        fetchTransactions(selectedMonth, selectedYear),
+        fetchTransactions(isYearView ? undefined : selectedMonth, isYearView ? undefined : selectedYear),
         fetchSummary(selectedMonth, selectedYear),
         fetchProjection(timeframeConfig.months),
-        fetchIncomes(),
+        fetchIncomes(isYearView ? undefined : selectedMonth, isYearView ? undefined : selectedYear),
         fetchTotal(selectedMonth, selectedYear),
         loadInstallments(),
       ]);
@@ -125,13 +129,19 @@ export function Overview() {
     selectedMonth,
     selectedYear,
     timeframeConfig.months,
+    showFullYear,
   ]);
 
   useEffect(() => {
     loadOverview();
   }, [loadOverview]);
 
-  const netSalary = totalIncome || 0;
+  const netSalary = useMemo(() => {
+    if (showFullYear) {
+      return incomes.reduce((sum, income) => sum + Number(income.amount ?? 0), 0);
+    }
+    return totalIncome || 0;
+  }, [showFullYear, incomes, totalIncome]);
   const fixedExpenses = useMemo(
     () => transactions.filter((transaction) => transaction.isFixed),
     [transactions],
@@ -242,10 +252,10 @@ export function Overview() {
 
   const totalsBarData = useMemo(
     () => [
-      { label: 'Recebido', value: netSalary, color: '#7c3aed' },
-      { label: 'Gasto', value: totalExpenses, color: '#fb7185' },
-      { label: 'Investido', value: summary?.debtsInvestments.total ?? 0, color: '#06b6d4' },
-      { label: 'Disponível', value: availableBalance, color: '#10b981' },
+      { label: 'Recebido', value: netSalary, color: '#22c55e' },
+      { label: 'Gasto', value: totalExpenses, color: '#ef4444' },
+      { label: 'Investido', value: summary?.debtsInvestments.total ?? 0, color: '#3b82f6' },
+      { label: 'Disponível', value: availableBalance, color: '#a855f7' },
     ],
     [availableBalance, netSalary, summary?.debtsInvestments.total, totalExpenses],
   );
@@ -360,31 +370,45 @@ export function Overview() {
           </div>
         </div>
         <div className="mt-6 flex flex-wrap gap-3 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2 rounded-2xl border bg-background px-3 py-2">
+          <button
+            onClick={() => setShowFullYear(!showFullYear)}
+            className={`flex items-center gap-2 rounded-2xl border px-3 py-2 transition ${
+              showFullYear 
+                ? 'bg-primary/10 border-primary text-primary' 
+                : 'bg-background hover:bg-muted'
+            }`}
+          >
             <CalendarDays className="h-4 w-4" />
-            <select
-              value={selectedMonth}
-              onChange={(event) => setSelectedMonth(Number(event.target.value))}
-              className="bg-transparent outline-none"
-            >
-              {monthsOptions.map((month) => (
-                <option key={month} value={month}>
-                  {formatMonthYear(month, selectedYear).split(' ')[0]}
-                </option>
-              ))}
-            </select>
-            <select
-              value={selectedYear}
-              onChange={(event) => setSelectedYear(Number(event.target.value))}
-              className="bg-transparent outline-none"
-            >
-              {yearsOptions.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </div>
+            {showFullYear ? `Ano ${selectedYear}` : 'Ver por mês'}
+          </button>
+          
+          {!showFullYear && (
+            <div className="flex items-center gap-2 rounded-2xl border bg-background px-3 py-2">
+              <select
+                value={selectedMonth}
+                onChange={(event) => setSelectedMonth(Number(event.target.value))}
+                className="bg-transparent outline-none"
+              >
+                {monthsOptions.map((month) => (
+                  <option key={month} value={month}>
+                    {formatMonthYear(month, selectedYear).split(' ')[0]}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={selectedYear}
+                onChange={(event) => setSelectedYear(Number(event.target.value))}
+                className="bg-transparent outline-none"
+              >
+                {yearsOptions.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          
           <p className="flex items-center gap-2 rounded-2xl border bg-background px-3 py-2">
             <LineChartIcon className="h-4 w-4" />
             {timeframeConfig.helper}

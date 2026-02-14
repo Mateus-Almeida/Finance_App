@@ -91,4 +91,24 @@ export class CreateTransactionDto {
   @IsOptional()
   @Min(1)
   totalInstallments?: number;
+
+  @ApiProperty({
+    description: 'Indica se a transação deve se repetir mensalmente',
+    required: false,
+    example: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  repeatMonthly?: boolean;
+
+  @ApiProperty({
+    description: 'Quantos meses repetir quando repeatMonthly é true',
+    required: false,
+    example: 5,
+    minimum: 2,
+  })
+  @IsNumber()
+  @IsOptional()
+  @Min(2)
+  repeatMonths?: number;
 }

@@ -15,12 +15,11 @@ const STORAGE_KEY = 'finance-tracker-theme';
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window === 'undefined') {
-      return 'light';
+      return 'dark';
     }
     const stored = window.localStorage.getItem(STORAGE_KEY) as Theme | null;
     if (stored) return stored;
-    const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
-    return prefersDark ? 'dark' : 'light';
+    return 'dark';
   });
 
   useEffect(() => {

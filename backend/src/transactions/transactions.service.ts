@@ -25,11 +25,12 @@ export class TransactionsService {
 
   /**
    * Cria uma transação e, se for parcelada, gera os registros individuais de parcelas
+   * Se repeatMonthly for true, cria transações para cada mês
    */
   async create(
     createTransactionDto: CreateTransactionDto,
     userId: string,
-  ): Promise<Transaction> {
+  ): Promise<Transaction | Transaction[]> {
     const {
       categoryId,
       description,
@@ -40,6 +41,8 @@ export class TransactionsService {
       isFixed,
       isInstallment,
       totalInstallments,
+      repeatMonthly,
+      repeatMonths,
     } = createTransactionDto;
 
     // Verifica se a categoria existe
@@ -49,6 +52,43 @@ export class TransactionsService {
 
     if (!category) {
       throw new NotFoundException('Categoria não encontrada');
+    }
+
+    // Se for repetição mensal, cria transações para cada mês
+    if (repeatMonthly && repeatMonths && repeatMonths > 1) {
+      const transactions: Transaction[] = [];
+      let currentMonth = month;
+      let currentYear = year;
+
+      for (let i = 0; i < repeatMonths; i++) {
+        const transactionDateObj = new Date(currentYear, currentMonth - 1, 15);
+        
+        const transaction = this.transactionRepository.create({
+          userId,
+          categoryId,
+          description: `${description} (${i + 1}/${repeatMonths})`,
+          amount,
+          transactionDate: transactionDateObj,
+          month: currentMonth,
+          year: currentYear,
+          isFixed: isFixed || false,
+          isInstallment: false,
+          totalInstallments: 1,
+          installmentGroupId: null,
+        });
+
+        const saved = await this.transactionRepository.save(transaction);
+        transactions.push(saved);
+
+        // Avança para o próximo mês
+        currentMonth++;
+        if (currentMonth > 12) {
+          currentMonth = 1;
+          currentYear++;
+        }
+      }
+
+      return transactions;
     }
 
     // Gera um grupo ID único para parcelas

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Category } from '@/types';
+import { Category, Transaction } from '@/types';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,8 +20,11 @@ interface CreateTransactionModalProps {
     isFixed: boolean;
     isInstallment: boolean;
     totalInstallments: number;
+    repeatMonthly: boolean;
+    repeatMonths: number;
   }) => Promise<void>;
   isSubmitting: boolean;
+  editTransaction?: Transaction | null;
 }
 
 export function CreateTransactionModal({
@@ -30,6 +33,7 @@ export function CreateTransactionModal({
   categories,
   onSubmit,
   isSubmitting,
+  editTransaction,
 }: CreateTransactionModalProps) {
   const [form, setForm] = useState({
     categoryId: '',
@@ -39,13 +43,27 @@ export function CreateTransactionModal({
     isFixed: false,
     isInstallment: false,
     totalInstallments: 1,
+    repeatMonthly: false,
+    repeatMonths: 1,
   });
 
   useEffect(() => {
-    if (categories.length > 0 && !form.categoryId) {
+    if (editTransaction) {
+      setForm({
+        categoryId: editTransaction.categoryId || categories[0]?.id || '',
+        description: editTransaction.description,
+        amount: String(editTransaction.amount),
+        transactionDate: new Date(editTransaction.transactionDate).toISOString().split('T')[0],
+        isFixed: editTransaction.isFixed,
+        isInstallment: editTransaction.isInstallment,
+        totalInstallments: 1,
+        repeatMonthly: false,
+        repeatMonths: 1,
+      });
+    } else if (categories.length > 0 && !form.categoryId) {
       setForm((prev) => ({ ...prev, categoryId: categories[0].id }));
     }
-  }, [categories, form.categoryId]);
+  }, [editTransaction, categories]);
 
   const handleSubmit = async () => {
     if (!form.categoryId) {
@@ -64,6 +82,10 @@ export function CreateTransactionModal({
       toast.error('Parcelas precisam ser no mínimo 2');
       return;
     }
+    if (form.repeatMonthly && form.repeatMonths < 2) {
+      toast.error('Repetição mensal precisa ser de pelo menos 2 meses');
+      return;
+    }
 
     const date = new Date(form.transactionDate);
     const payload = {
@@ -76,6 +98,8 @@ export function CreateTransactionModal({
       isFixed: form.isFixed,
       isInstallment: form.isInstallment,
       totalInstallments: form.isInstallment ? form.totalInstallments : 1,
+      repeatMonthly: form.repeatMonthly,
+      repeatMonths: form.repeatMonthly ? form.repeatMonths : 1,
     };
 
     await onSubmit(payload);
@@ -87,19 +111,23 @@ export function CreateTransactionModal({
       isFixed: false,
       isInstallment: false,
       totalInstallments: 1,
+      repeatMonthly: false,
+      repeatMonths: 1,
     });
     onClose();
   };
+
+  const isEditing = !!editTransaction;
 
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Registrar despesa"
-      description="Cadastre uma transação única ou parcelada."
+      title={isEditing ? 'Editar transação' : 'Registrar despesa'}
+      description={isEditing ? 'Atualize os dados da transação.' : 'Cadastre uma transação única ou parcelada.'}
       footer={
         <Button onClick={handleSubmit} disabled={isSubmitting}>
-          {isSubmitting ? 'Salvando...' : 'Salvar'}
+          {isSubmitting ? 'Salvando...' : isEditing ? 'Atualizar' : 'Salvar'}
         </Button>
       }
     >
@@ -167,6 +195,7 @@ export function CreateTransactionModal({
               setForm((prev) => ({
                 ...prev,
                 isInstallment: e.target.checked,
+                repeatMonthly: e.target.checked ? false : prev.repeatMonthly,
                 totalInstallments: e.target.checked ? Math.max(prev.totalInstallments, 2) : 1,
               }))
             }
@@ -191,7 +220,45 @@ export function CreateTransactionModal({
             }
           />
         </div>
-      ) : null}
+      ) : (
+        <>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.repeatMonthly}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    repeatMonthly: e.target.checked,
+                    repeatMonths: e.target.checked ? Math.max(prev.repeatMonths, 2) : 1,
+                  }))
+                }
+              />
+              Repetir mensalmente
+            </label>
+          </div>
+
+          {form.repeatMonthly ? (
+            <div className="space-y-2">
+              <Label htmlFor="repeatMonths">Quantos meses?</Label>
+              <Input
+                id="repeatMonths"
+                type="number"
+                min="2"
+                max="24"
+                value={form.repeatMonths}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    repeatMonths: Number(e.target.value),
+                  }))
+                }
+              />
+            </div>
+          ) : null}
+        </>
+      )}
     </Modal>
   );
 }

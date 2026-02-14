@@ -1,14 +1,15 @@
 import { Transaction } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Pencil } from 'lucide-react';
 
 interface TransactionsTableProps {
   transactions: Transaction[];
-  onDelete: (id: string) => Promise<void>;
+  onDelete: (id: string, description: string) => void;
+  onEdit: (transaction: Transaction) => void;
 }
 
-export function TransactionsTable({ transactions, onDelete }: TransactionsTableProps) {
+export function TransactionsTable({ transactions, onDelete, onEdit }: TransactionsTableProps) {
   return (
     <div className="rounded-2xl border bg-card p-5">
       <div className="flex items-center justify-between">
@@ -28,7 +29,7 @@ export function TransactionsTable({ transactions, onDelete }: TransactionsTableP
               <th className="px-3 py-2">Data</th>
               <th className="px-3 py-2">Valor</th>
               <th className="px-3 py-2 text-center">Tipo</th>
-              <th className="px-3 py-2"></th>
+              <th className="px-3 py-2 text-center">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -57,14 +58,24 @@ export function TransactionsTable({ transactions, onDelete }: TransactionsTableP
                     {transaction.isInstallment ? 'Parcelado' : transaction.isFixed ? 'Fixo' : 'Avulso'}
                   </td>
                   <td className="px-3 py-3 text-right">
-                    <Button
-                      variant='ghost'
-                      size='icon'
-                      className='text-muted-foreground hover:text-destructive'
-                      onClick={() => onDelete(transaction.id)}
-                    >
-                      <Trash2 className='h-4 w-4' />
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant='ghost'
+                        size='icon'
+                        className='text-muted-foreground hover:text-primary'
+                        onClick={() => onEdit(transaction)}
+                      >
+                        <Pencil className='h-4 w-4' />
+                      </Button>
+                      <Button
+                        variant='ghost'
+                        size='icon'
+                        className='text-muted-foreground hover:text-destructive'
+                        onClick={() => onDelete(transaction.id, transaction.description)}
+                      >
+                        <Trash2 className='h-4 w-4' />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))
