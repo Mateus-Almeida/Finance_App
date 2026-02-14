@@ -191,7 +191,7 @@ function groupByType(categories: Category[]) {
     },
     {
       type: CategoryType.DEBTS_INVESTMENTS,
-      title: 'Dívidas & Invest.',
+      title: 'Reservas',
       percentage: 20,
       categories: map[CategoryType.DEBTS_INVESTMENTS],
     },

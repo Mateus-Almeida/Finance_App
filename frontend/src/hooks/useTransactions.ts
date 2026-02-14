@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { transactionService, CreateTransactionData } from '@/services/transaction.service';
+import { transactionService, CreateTransactionData, CategorySummary } from '@/services/transaction.service';
 import { Transaction, MonthlySummary, ProjectionData } from '@/types';
 
 // ============================================
@@ -10,11 +10,13 @@ interface UseTransactionsReturn {
   transactions: Transaction[];
   summary: MonthlySummary | null;
   projection: ProjectionData[];
+  categorySummary: CategorySummary[];
   isLoading: boolean;
   error: string | null;
   fetchTransactions: (month?: number, year?: number) => Promise<void>;
   fetchSummary: (month: number, year: number) => Promise<void>;
   fetchProjection: (months?: number) => Promise<void>;
+  fetchCategorySummary: (month?: number, year?: number) => Promise<void>;
   createTransaction: (data: CreateTransactionData) => Promise<void>;
   updateTransaction: (id: string, data: Partial<CreateTransactionData>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
@@ -24,6 +26,7 @@ export function useTransactions(): UseTransactionsReturn {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<MonthlySummary | null>(null);
   const [projection, setProjection] = useState<ProjectionData[]>([]);
+  const [categorySummary, setCategorySummary] = useState<CategorySummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,6 +64,19 @@ export function useTransactions(): UseTransactionsReturn {
       setProjection(data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erro ao carregar projeção');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const fetchCategorySummary = useCallback(async (month?: number, year?: number) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await transactionService.getByCategory(month, year);
+      setCategorySummary(data);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erro ao carregar por categoria');
     } finally {
       setIsLoading(false);
     }
@@ -110,11 +126,13 @@ export function useTransactions(): UseTransactionsReturn {
     transactions,
     summary,
     projection,
+    categorySummary,
     isLoading,
     error,
     fetchTransactions,
     fetchSummary,
     fetchProjection,
+    fetchCategorySummary,
     createTransaction,
     updateTransaction,
     deleteTransaction,

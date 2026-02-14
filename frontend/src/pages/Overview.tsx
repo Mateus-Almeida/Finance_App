@@ -3,14 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import {
   Area,
   AreaChart,
-  Bar,
-  BarChart,
   CartesianGrid,
-  Cell,
   Line,
   LineChart,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -39,7 +34,6 @@ import { Installment, CategoryType, Transaction, Income } from '@/types';
 import { useTheme } from '@/theme';
 import { toast } from 'sonner';
 
-const donutPalette = ['#7c3aed', '#22d3ee', '#10b981', '#f97316'];
 const areaColors = {
   fixed: '#6366f1',
   installments: '#f97316',
@@ -63,9 +57,11 @@ export function Overview() {
     transactions,
     summary,
     projection,
+    categorySummary,
     fetchTransactions,
     fetchSummary,
     fetchProjection,
+    fetchCategorySummary,
     isLoading: isLoadingTransactions,
   } = useTransactions();
 
@@ -98,6 +94,7 @@ export function Overview() {
         fetchTransactions(isYearView ? undefined : selectedMonth, isYearView ? undefined : selectedYear),
         fetchSummary(selectedMonth, selectedYear),
         fetchProjection(monthsToFetch),
+        fetchCategorySummary(isYearView ? undefined : selectedMonth, isYearView ? undefined : selectedYear),
         fetchIncomes(isYearView ? undefined : selectedMonth, isYearView ? undefined : selectedYear),
         fetchTotal(selectedMonth, selectedYear),
         loadInstallments(),
@@ -109,6 +106,7 @@ export function Overview() {
     fetchTransactions,
     fetchSummary,
     fetchProjection,
+    fetchCategorySummary,
     fetchIncomes,
     fetchTotal,
     loadInstallments,
@@ -158,24 +156,14 @@ export function Overview() {
   const totalCommitments = fixedTotal + installmentsTotal;
   const availableBalance = netSalary - totalCommitments;
 
-  const investmentsTotal = useMemo(() => {
-    if (showFullYear) {
-      return transactions
-        .filter((t) => t.category?.type === CategoryType.DEBTS_INVESTMENTS)
-        .reduce((sum, t) => sum + Math.abs(Number(t.amount ?? 0)), 0);
-    }
-    return summary?.debtsInvestments.total ?? 0;
-  }, [showFullYear, transactions, summary]);
-
-  const donutData = useMemo(() => {
-    const data = [
-      { name: 'Receitas', value: Math.max(netSalary, 0) },
-      { name: 'Despesas', value: Math.max(totalExpenses, 0) },
-      { name: 'Dívidas & Invest.', value: investmentsTotal },
-      { name: 'Saldo', value: Math.max(availableBalance, 0) },
-    ];
-    return data.filter((item) => item.value > 0);
-  }, [availableBalance, netSalary, investmentsTotal, totalExpenses]);
+  const totalsBarData = useMemo(
+    () => [
+      { label: 'Receitas', value: netSalary, color: '#22c55e' },
+      { label: 'Despesas', value: totalExpenses, color: '#ef4444' },
+      { label: 'Saldo', value: availableBalance, color: '#a855f7' },
+    ],
+    [availableBalance, netSalary, totalExpenses],
+  );
 
   const monthlyLineSeries = useMemo(() => {
     if (showFullYear) {
@@ -266,17 +254,6 @@ export function Overview() {
     monthlyLineSeries,
   ]);
 
-  const investmentsTrend = useMemo(
-    () =>
-      projection.map((item) => ({
-        label: item.monthName.substring(0, 3),
-        value: item.installments
-          .filter((installment) => installment.categoryType === CategoryType.DEBTS_INVESTMENTS)
-          .reduce((sum, record) => sum + Number(record.amount), 0),
-      })),
-    [projection],
-  );
-
   const balanceTrend = useMemo(
     () =>
       monthlyLineSeries.map((item) => ({
@@ -303,10 +280,12 @@ export function Overview() {
     },
     {
       title: 'Dívidas & Invest.',
-      total: investmentsTotal,
-      series: investmentsTrend.length ? investmentsTrend : expenseTrend,
+      total: transactions
+        .filter((t) => t.category?.type === CategoryType.DEBTS_INVESTMENTS)
+        .reduce((sum, t) => sum + Math.abs(Number(t.amount ?? 0)), 0),
+      series: [],
       color: '#3b82f6',
-      icon: <PieChartIcon className="h-4 w-4" />,
+      icon: <TrendingUp className="h-4 w-4" />,
     },
     {
       title: 'Saldo',
@@ -316,16 +295,6 @@ export function Overview() {
       icon: <LineChartIcon className="h-4 w-4" />,
     },
   ];
-
-  const totalsBarData = useMemo(
-    () => [
-      { label: 'Receitas', value: netSalary, color: '#22c55e' },
-      { label: 'Despesas', value: totalExpenses, color: '#ef4444' },
-      { label: 'Dívidas & Invest.', value: investmentsTotal, color: '#3b82f6' },
-      { label: 'Saldo', value: availableBalance, color: '#a855f7' },
-    ],
-    [availableBalance, netSalary, investmentsTotal, totalExpenses],
-  );
 
   const categoryBarData = useMemo(() => {
     if (showFullYear) {
@@ -345,7 +314,7 @@ export function Overview() {
       return [
         { label: 'Essencial', value: essential, percentage: (essential / total) * 100, color: '#8b5cf6' },
         { label: 'Estilo de Vida', value: lifestyle, percentage: (lifestyle / total) * 100, color: '#06b6d4' },
-        { label: 'Dívidas & Invest.', value: debtsInvest, percentage: (debtsInvest / total) * 100, color: '#f97316' },
+        { label: 'Reservas', value: debtsInvest, percentage: (debtsInvest / total) * 100, color: '#f97316' },
       ];
     }
     
@@ -364,7 +333,7 @@ export function Overview() {
         color: '#06b6d4',
       },
       {
-        label: 'Dívidas & Invest.',
+        label: 'Reservas',
         value: summary.debtsInvestments.total,
         percentage: summary.debtsInvestments.percentage,
         color: '#f97316',
@@ -407,6 +376,16 @@ export function Overview() {
   const yearsOptions = Array.from({ length: 5 }, (_, index) => getCurrentYear() - 2 + index);
 
   const isLoading = isSyncing || isLoadingTransactions || isLoadingIncomes;
+
+  const categoryChartData = useMemo(() => {
+    if (!categorySummary.length) return [];
+    return categorySummary.map((cat) => ({
+      name: cat.name,
+      value: cat.total,
+      color: cat.color || '#6366f1',
+      count: cat.count,
+    }));
+  }, [categorySummary]);
 
   const handleToggleInstallment = useCallback(
     async (installment: Installment) => {
@@ -498,14 +477,13 @@ export function Overview() {
 
       <TotalsBarCard data={totalsBarData} />
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <MonthlyLineCard
           data={monthlyLineSeries}
           theme={theme}
           onPointClick={(pointKey) => setFocusedLabel(pointKey)}
           focusedKey={focusedLabel}
         />
-        <DonutDistributionCard data={donutData} balance={availableBalance} />
         <DrilldownPanel summary={drilldownSummary} transactions={drilldownTransactions} />
       </section>
 
@@ -513,6 +491,7 @@ export function Overview() {
         <div className="space-y-6 xl:col-span-2">
           <ExpenseStackCard data={monthlyLineSeries} />
           <CategoryBarCard data={categoryBarData} />
+          
         </div>
         <div className="space-y-6">
           <TransactionsTimeline timeline={transactionsTimeline} />
@@ -599,92 +578,40 @@ function MetricSparkCard({
   );
 }
 
-function TotalsBarCard({ data }: { data: { label: string; value: number; color: string }[] }) {
-  const chartData = data.map((item) => ({ ...item, value: Number(item.value.toFixed(2)) }));
+function TotalsBarCard({ data }: { data: { label: string; value: number; color: string; icon: string }[] }) {
+  const maxValue = Math.max(...data.map(d => d.value), 1);
+  
   return (
-    <Card className="rounded-[28px] border bg-card/80 shadow-sm">
-      <CardHeader className="flex flex-col gap-1 pb-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <TrendingUp className="h-5 w-5 text-primary" /> Totais consolidados
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">Visão geral por categoria financeira</p>
-        </div>
-        <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          Valores médios do período selecionado
-        </span>
-      </CardHeader>
-      <CardContent className="h-[240px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} layout="vertical" margin={{ left: 20, bottom: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,.2)" horizontal={false} />
-            <XAxis type="number" tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} hide />
-            <YAxis dataKey="label" type="category" width={120} axisLine={false} tickLine={false} />
-            <Tooltip formatter={(value: number) => formatCurrency(value)} />
-            <Bar dataKey="value" radius={[12, 12, 12, 12]}>
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
-  );
-}
-
-function DonutDistributionCard({ data, balance }: { data: { name: string; value: number }[]; balance: number }) {
-  return (
-    <Card className="rounded-[32px] border bg-card/80 shadow-xl shadow-primary/10">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-          <PieChartIcon className="h-5 w-5 text-primary" /> Distribuição
+    <Card className="rounded-[28px] border bg-card/90 overflow-hidden">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <TrendingUp className="h-5 w-5 text-primary" /> Resumo Financeiro
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Resumo das receitas, despesas e saldo do período
-        </p>
+        <p className="text-sm text-muted-foreground">Visão geral do período</p>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="relative h-[320px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={80}
-                outerRadius={120}
-                paddingAngle={4}
-                cornerRadius={10}
-                dataKey="value"
-              >
-                {data.map((_, index) => (
-                  <Cell key={index} fill={donutPalette[index % donutPalette.length]} stroke="none" />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(value: number) => formatCurrency(value)}
-                contentStyle={{ borderRadius: 16, borderColor: '#e2e8f0' }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Saldo</p>
-            <p className="text-3xl font-semibold">{formatCurrency(balance)}</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          {data.map((segment, index) => (
-            <div key={segment.name} className="flex items-center gap-2 rounded-2xl bg-muted/60 px-3 py-2">
-              <span
-                className="h-2 w-2 rounded-full"
-                style={{ backgroundColor: donutPalette[index % donutPalette.length] }}
-              />
-              <span className="text-muted-foreground">{segment.name}</span>
-              <span className="ml-auto font-semibold">{formatCurrency(segment.value)}</span>
+      <CardContent className="space-y-4 pt-2">
+        {data.map((item) => (
+          <div key={item.label} className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{item.icon}</span>
+                <span className="font-medium">{item.label}</span>
+              </div>
+              <span className="text-lg font-bold" style={{ color: item.color }}>
+                {formatCurrency(item.value)}
+              </span>
             </div>
-          ))}
-        </div>
+            <div className="h-3 w-full rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${(Math.abs(item.value) / maxValue) * 100}%`,
+                  backgroundColor: item.color,
+                }}
+              />
+            </div>
+          </div>
+        ))}
       </CardContent>
     </Card>
   );
@@ -850,7 +777,6 @@ function MonthlyLineCard({
             <Line type="monotone" dataKey="installments" stroke="#f97316" strokeWidth={2} strokeDasharray="2 8" />
           </LineChart>
         </ResponsiveContainer>
-        <p className="pt-4 text-center text-xs text-muted-foreground">Clique em um mês para abrir o drilldown</p>
       </CardContent>
     </Card>
   );
@@ -901,35 +827,97 @@ function CategoryBarCard(
   { data }: { data: { label: string; value: number; percentage: number; color: string }[] },
 ) {
   return (
+    <Card className="rounded-[28px] border bg-card/90 overflow-hidden">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <CalendarIcon className="h-5 w-5 text-primary" /> Metodologia 50/30/20
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">Como seus gastos estão distribuídos</p>
+      </CardHeader>
+      <CardContent className="space-y-4 pt-2">
+        {data.length === 0 ? (
+          <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+            Cadastre transações para visualizar.
+          </div>
+        ) : (
+          <>
+            <div className="flex h-4 rounded-full overflow-hidden bg-muted">
+              {data.map((item) => (
+                <div
+                  key={item.label}
+                  className="h-full transition-all duration-500"
+                  style={{
+                    width: `${item.percentage}%`,
+                    backgroundColor: item.color,
+                  }}
+                  title={`${item.label}: ${item.percentage.toFixed(1)}%`}
+                />
+              ))}
+            </div>
+            
+            <div className="grid grid-cols-3 gap-2 text-center">
+              {data.map((item) => (
+                <div key={item.label} className="space-y-1">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span className="text-xs font-medium">{item.label}</span>
+                  </div>
+                  <p className="text-lg font-bold">{formatCurrency(item.value)}</p>
+                  <p className="text-xs text-muted-foreground">{item.percentage.toFixed(1)}%</p>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CategoryBreakdownCard({ data }: { data: { name: string; value: number; color: string; count: number }[] }) {
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+  
+  return (
     <Card className="rounded-[28px] border bg-card/90">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
-          <CalendarIcon className="h-5 w-5 text-primary" /> Visão 50/30/20
+          <PieChartIcon className="h-5 w-5 text-primary" /> Por categoria
         </CardTitle>
-        <p className="text-sm text-muted-foreground">Distribuição por tipo de gasto</p>
+        <p className="text-sm text-muted-foreground">Gastos por categoria do período</p>
       </CardHeader>
-      <CardContent className="h-[260px]">
-        {data.length ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} layout="vertical" margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,.2)" horizontal={false} />
-              <XAxis type="number" tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} hide />
-              <YAxis dataKey="label" type="category" width={120} axisLine={false} tickLine={false} />
-              <Tooltip
-                formatter={(value: number, _, payload) => `${formatCurrency(value as number)} • ${payload?.payload?.percentage}%`}
-                contentStyle={{ borderRadius: 16, borderColor: '#e2e8f0' }}
-              />
-              <Bar dataKey="value" radius={12}>
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            Cadastre transações para visualizar esta área.
+      <CardContent className="space-y-3">
+        {data.length === 0 ? (
+          <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+            Cadastre transações para visualizar.
           </div>
+        ) : (
+          <>
+            {data.slice(0, 8).map((item) => (
+              <div key={item.name} className="flex items-center gap-3">
+                <div className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className="truncate text-sm font-medium">{item.name}</p>
+                    <p className="text-sm font-semibold">{formatCurrency(item.value)}</p>
+                  </div>
+                  <div className="mt-1 h-1.5 w-full rounded-full bg-muted">
+                    <div
+                      className="h-1.5 rounded-full"
+                      style={{
+                        width: `${total > 0 ? (item.value / total) * 100 : 0}%`,
+                        backgroundColor: item.color,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            {data.length > 8 && (
+              <p className="text-xs text-muted-foreground text-center pt-2">
+                + {data.length - 8} categorias
+              </p>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

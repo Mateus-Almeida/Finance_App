@@ -9,11 +9,11 @@ import { CreateIncomeModal } from '@/components/dashboard/CreateIncomeModal';
 import { TransactionsTable } from '@/components/dashboard/TransactionsTable';
 import { IncomeSchedule } from '@/components/dashboard/IncomeSchedule';
 import { toast } from 'sonner';
-import { Transaction } from '@/types';
+import { Transaction, Income } from '@/types';
 
 export function EntriesPage() {
   const { transactions, fetchTransactions, deleteTransaction, createTransaction, updateTransaction } = useTransactions();
-  const { incomes, fetchIncomes, deleteIncome, createIncome } = useIncomes();
+  const { incomes, fetchIncomes, deleteIncome, createIncome, updateIncome } = useIncomes();
 
   const { categories, fetchCategories } = useCategories();
 
@@ -21,6 +21,7 @@ export function EntriesPage() {
   const [incomeModalOpen, setIncomeModalOpen] = useState(false);
   const [modalSaving, setModalSaving] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [editingIncome, setEditingIncome] = useState<Income | null>(null);
 
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
@@ -85,6 +86,30 @@ export function EntriesPage() {
     }
   };
 
+  const handleUpdateIncome = async (payload: Parameters<typeof createIncome>[0]) => {
+    if (!editingIncome) return;
+    try {
+      setModalSaving(true);
+      await updateIncome(editingIncome.id, payload);
+      toast.success('Renda atualizada');
+      await fetchIncomes();
+      setEditingIncome(null);
+      setIncomeModalOpen(false);
+    } finally {
+      setModalSaving(false);
+    }
+  };
+
+  const handleEditIncome = (income: Income) => {
+    setEditingIncome(income);
+    setIncomeModalOpen(true);
+  };
+
+  const handleCloseIncomeModal = () => {
+    setIncomeModalOpen(false);
+    setEditingIncome(null);
+  };
+
   const handleDeleteTransaction = (id: string, description: string) => {
     setConfirmDialog({
       open: true,
@@ -130,6 +155,7 @@ export function EntriesPage() {
         <IncomeSchedule
           incomes={incomes}
           onDelete={handleDeleteIncome}
+          onEdit={handleEditIncome}
         />
       </div>
       <CreateTransactionModal
@@ -142,9 +168,10 @@ export function EntriesPage() {
       />
       <CreateIncomeModal
         open={incomeModalOpen}
-        onClose={() => setIncomeModalOpen(false)}
-        onSubmit={handleCreateIncome}
+        onClose={handleCloseIncomeModal}
+        onSubmit={editingIncome ? handleUpdateIncome : handleCreateIncome}
         isSubmitting={modalSaving}
+        editIncome={editingIncome}
       />
       <ConfirmDialog
         open={confirmDialog.open}

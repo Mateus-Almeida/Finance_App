@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   Request,
+  Logger,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -29,14 +30,22 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @Controller('transactions')
 @UseGuards(JwtAuthGuard)
 export class TransactionsController {
+  private readonly logger = new Logger(TransactionsController.name);
+
   constructor(private readonly transactionsService: TransactionsService) {}
 
   @ApiOperation({ summary: 'Criar nova transação' })
   @ApiBody({ type: CreateTransactionDto })
   @ApiOkResponse({ description: 'Transação criada' })
   @Post()
-  create(@Body() createTransactionDto: CreateTransactionDto, @Request() req) {
-    return this.transactionsService.create(createTransactionDto, req.user.userId);
+  async create(@Body() createTransactionDto: CreateTransactionDto, @Request() req) {
+    try {
+      this.logger.log('Received data:', createTransactionDto);
+      return await this.transactionsService.create(createTransactionDto, req.user.userId);
+    } catch (error) {
+      this.logger.error('Error creating transaction:', error);
+      throw error;
+    }
   }
 
   @ApiOperation({ summary: 'Listar transações por mês e ano' })
@@ -60,6 +69,18 @@ export class TransactionsController {
   @Get('projection')
   getProjection(@Query('months') months: number, @Request() req) {
     return this.transactionsService.getProjection(req.user.userId, months || 6);
+  }
+
+  @ApiOperation({ summary: 'Totais por categoria' })
+  @ApiQuery({ name: 'month', required: false, description: 'Mês filtrado' })
+  @ApiQuery({ name: 'year', required: false, description: 'Ano filtrado' })
+  @Get('by-category')
+  getByCategory(
+    @Query('month') month: number,
+    @Query('year') year: number,
+    @Request() req,
+  ) {
+    return this.transactionsService.getByCategory(req.user.userId, month, year);
   }
 
   @ApiOperation({ summary: 'Buscar transação por ID' })

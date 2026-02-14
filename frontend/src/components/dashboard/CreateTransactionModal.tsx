@@ -22,6 +22,7 @@ interface CreateTransactionModalProps {
     totalInstallments: number;
     repeatMonthly: boolean;
     repeatMonths: number;
+    isPaid?: boolean;
   }) => Promise<void>;
   isSubmitting: boolean;
   editTransaction?: Transaction | null;
@@ -45,6 +46,7 @@ export function CreateTransactionModal({
     totalInstallments: 1,
     repeatMonthly: false,
     repeatMonths: 1,
+    isPaid: false,
   });
 
   useEffect(() => {
@@ -59,6 +61,7 @@ export function CreateTransactionModal({
         totalInstallments: 1,
         repeatMonthly: false,
         repeatMonths: 1,
+        isPaid: (editTransaction as any).isPaid || false,
       });
     } else if (categories.length > 0 && !form.categoryId) {
       setForm((prev) => ({ ...prev, categoryId: categories[0].id }));
@@ -100,6 +103,7 @@ export function CreateTransactionModal({
       totalInstallments: form.isInstallment ? form.totalInstallments : 1,
       repeatMonthly: form.repeatMonthly,
       repeatMonths: form.repeatMonthly ? form.repeatMonths : 1,
+      isPaid: form.isPaid,
     };
 
     await onSubmit(payload);
@@ -113,6 +117,7 @@ export function CreateTransactionModal({
       totalInstallments: 1,
       repeatMonthly: false,
       repeatMonths: 1,
+      isPaid: false,
     });
     onClose();
   };
@@ -185,7 +190,7 @@ export function CreateTransactionModal({
             checked={form.isFixed}
             onChange={(e) => setForm((prev) => ({ ...prev, isFixed: e.target.checked }))}
           />
-          Marcar como gasto fixo
+          Gasto fixo
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -201,6 +206,14 @@ export function CreateTransactionModal({
             }
           />
           Criar parcelamento
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.isPaid}
+            onChange={(e) => setForm((prev) => ({ ...prev, isPaid: e.target.checked }))}
+          />
+          Já foi pago
         </label>
       </div>
 

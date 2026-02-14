@@ -43,6 +43,7 @@ export class TransactionsService {
       totalInstallments,
       repeatMonthly,
       repeatMonths,
+      isPaid,
     } = createTransactionDto;
 
     // Verifica se a categoria existe
@@ -75,6 +76,7 @@ export class TransactionsService {
           isInstallment: false,
           totalInstallments: 1,
           installmentGroupId: null,
+          isPaid: isPaid || false,
         });
 
         const saved = await this.transactionRepository.save(transaction);
@@ -107,6 +109,7 @@ export class TransactionsService {
       isInstallment: isInstallment || false,
       totalInstallments: totalInstallments || 1,
       installmentGroupId,
+      isPaid: isPaid || false,
     });
 
     const savedTransaction = await this.transactionRepository.save(transaction);
@@ -449,5 +452,51 @@ export class TransactionsService {
         ((availableBalance / netSalary) * 100).toFixed(2),
       ),
     };
+  }
+
+  async getByCategory(
+    userId: string,
+    month?: number,
+    year?: number,
+  ): Promise<any[]> {
+    const where: any = { userId };
+
+    if (month && year) {
+      where.month = month;
+      where.year = year;
+    }
+
+    const transactions = await this.transactionRepository.find({
+      where,
+      relations: ['category'],
+    });
+
+    const categoryMap = new Map<string, { 
+      name: string; 
+      type: string; 
+      color: string;
+      total: number;
+      count: number;
+    }>();
+
+    transactions.forEach((t) => {
+      const existing = categoryMap.get(t.categoryId);
+      const amount = parseFloat(t.amount.toString());
+      
+      if (existing) {
+        existing.total += amount;
+        existing.count += 1;
+      } else {
+        categoryMap.set(t.categoryId, {
+          name: t.category.name,
+          type: t.category.type,
+          color: t.category.color,
+          total: amount,
+          count: 1,
+        });
+      }
+    });
+
+    return Array.from(categoryMap.values()).sort((a, b) => b.total - a.total);
   }
 }

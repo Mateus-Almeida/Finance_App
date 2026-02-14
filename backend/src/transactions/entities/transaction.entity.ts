@@ -58,6 +58,9 @@ export class Transaction {
   @Column({ name: 'installment_group_id', nullable: true })
   installmentGroupId: string;
 
+  @Column({ name: 'is_paid', default: false })
+  isPaid: boolean;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

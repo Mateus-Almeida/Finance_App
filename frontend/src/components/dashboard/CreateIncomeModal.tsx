@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { getCurrentMonth, getCurrentYear } from '@/utils/format';
+import { Income } from '@/types';
 
 interface CreateIncomeModalProps {
   open: boolean;
@@ -17,9 +18,10 @@ interface CreateIncomeModalProps {
     isFixed: boolean;
   }) => Promise<void>;
   isSubmitting: boolean;
+  editIncome?: Income | null;
 }
 
-export function CreateIncomeModal({ open, onClose, onSubmit, isSubmitting }: CreateIncomeModalProps) {
+export function CreateIncomeModal({ open, onClose, onSubmit, isSubmitting, editIncome }: CreateIncomeModalProps) {
   const [form, setForm] = useState({
     description: '',
     amount: '',
@@ -27,6 +29,20 @@ export function CreateIncomeModal({ open, onClose, onSubmit, isSubmitting }: Cre
     month: getCurrentMonth(),
     year: getCurrentYear(),
   });
+
+  const isEditing = !!editIncome;
+
+  useEffect(() => {
+    if (editIncome) {
+      setForm({
+        description: editIncome.description,
+        amount: String(editIncome.amount),
+        isFixed: editIncome.isFixed,
+        month: editIncome.month,
+        year: editIncome.year,
+      });
+    }
+  }, [editIncome]);
 
   const handleSubmit = async () => {
     if (!form.description.trim() || !form.amount) {
@@ -50,15 +66,26 @@ export function CreateIncomeModal({ open, onClose, onSubmit, isSubmitting }: Cre
     onClose();
   };
 
+  const handleOpenChange = () => {
+    setForm({
+      description: '',
+      amount: '',
+      isFixed: true,
+      month: getCurrentMonth(),
+      year: getCurrentYear(),
+    });
+    onClose();
+  };
+
   return (
     <Modal
       open={open}
-      onClose={onClose}
-      title="Registrar renda"
-      description="Adicione salário, comissões ou outras entradas."
+      onClose={handleOpenChange}
+      title={isEditing ? 'Editar renda' : 'Registrar renda'}
+      description={isEditing ? 'Atualize os dados da renda.' : 'Adicione salário, comissões ou outras entradas.'}
       footer={
         <Button onClick={handleSubmit} disabled={isSubmitting}>
-          {isSubmitting ? 'Salvando...' : 'Salvar'}
+          {isSubmitting ? 'Salvando...' : isEditing ? 'Atualizar' : 'Salvar'}
         </Button>
       }
     >

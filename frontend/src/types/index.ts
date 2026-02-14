@@ -70,6 +70,7 @@ export interface Transaction {
   isInstallment: boolean;
   totalInstallments: number;
   installmentGroupId?: string;
+  isPaid: boolean;
   createdAt: string;
   updatedAt: string;
   installments?: Installment[];

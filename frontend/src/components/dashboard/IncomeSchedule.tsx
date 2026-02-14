@@ -1,14 +1,15 @@
 import { Income } from '@/types';
 import { formatCurrency } from '@/utils/format';
 import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Pencil } from 'lucide-react';
 
 interface IncomeScheduleProps {
   incomes: Income[];
   onDelete: (id: string, description: string) => void;
+  onEdit: (income: Income) => void;
 }
 
-export function IncomeSchedule({ incomes, onDelete }: IncomeScheduleProps) {
+export function IncomeSchedule({ incomes, onDelete, onEdit }: IncomeScheduleProps) {
   const total = incomes.reduce((acc, income) => acc + Number(income.amount ?? 0), 0);
 
   return (
@@ -45,6 +46,14 @@ export function IncomeSchedule({ incomes, onDelete }: IncomeScheduleProps) {
             </div>
             <div className="flex items-center gap-3">
               <p className="text-sm font-semibold">{formatCurrency(Number(income.amount))}</p>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-primary"
+                onClick={() => onEdit(income)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"

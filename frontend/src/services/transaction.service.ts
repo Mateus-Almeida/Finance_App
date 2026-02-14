@@ -17,6 +17,15 @@ export interface CreateTransactionData {
   totalInstallments?: number;
   repeatMonthly?: boolean;
   repeatMonths?: number;
+  isPaid?: boolean;
+}
+
+export interface CategorySummary {
+  name: string;
+  type: string;
+  color: string;
+  total: number;
+  count: number;
 }
 
 export const transactionService = {
@@ -56,6 +65,16 @@ export const transactionService = {
     const response = await api.get('/transactions/projection', {
       params: { months },
     });
+    return response.data;
+  },
+
+  async getByCategory(month?: number, year?: number): Promise<CategorySummary[]> {
+    const params: any = {};
+    if (month && year) {
+      params.month = month;
+      params.year = year;
+    }
+    const response = await api.get('/transactions/by-category', { params });
     return response.data;
   },
 };

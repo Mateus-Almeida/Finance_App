@@ -253,7 +253,7 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-
+              
         <Card className="col-span-1 bg-card/95">
           <CardHeader>
             <CardTitle>Transações recentes</CardTitle>
