@@ -1,5 +1,5 @@
 import api from './api';
-import { Transaction, CreateTransactionDto, MonthlySummary, ProjectionData } from '@/types';
+import { Transaction, MonthlySummary, ProjectionData } from '@/types';
 
 // ============================================
 // SERVIÇO DE TRANSAÇÕES

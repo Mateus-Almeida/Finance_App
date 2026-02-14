@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Home, Coffee, TrendingUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { formatCurrency } from '@/utils/format';
-import { CategoryType } from '@/types';
 
 // ============================================
 // COMPONENTE: VISÃO 50/30/20

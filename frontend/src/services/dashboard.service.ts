@@ -13,10 +13,9 @@ export const dashboardService = {
   ): Promise<RealityCardData> {
     // Esta é uma simulação - em produção, você criaria um endpoint específico
     // ou calcularia a partir dos outros dados
-    const [installmentsRes, fixedRes, incomeRes] = await Promise.all([
+    const [installmentsRes, fixedRes] = await Promise.all([
       api.get('/installments/total-pending', { params: { month, year } }),
       api.get('/transactions', { params: { month, year } }),
-      api.get('/incomes/total', { params: { month, year } }),
     ]);
 
     const installmentsTotal = installmentsRes.data.total || 0;

@@ -1,5 +1,4 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Wallet, TrendingDown, PiggyBank, AlertCircle } from 'lucide-react';
 import { formatCurrency } from '@/utils/format';
 
@@ -29,6 +28,10 @@ export function RealityCard({
 }: RealityCardProps) {
   const totalCommitments = installmentsTotal + fixedTotal;
   const isPositive = availableBalance >= 0;
+  const salaryBase = netSalary > 0 ? netSalary : 1;
+  const installmentsPercent = Math.min((installmentsTotal / salaryBase) * 100, 100);
+  const fixedPercent = Math.min((fixedTotal / salaryBase) * 100, 100);
+  const availablePercent = Math.min((Math.max(availableBalance, 0) / salaryBase) * 100, 100);
 
   return (
     <Card className="w-full">
@@ -51,6 +54,9 @@ export function RealityCard({
           <p className="text-xs text-muted-foreground mt-2">
             de {formatCurrency(netSalary)} de salário líquido
           </p>
+          <p className="text-xs text-muted-foreground">
+            {percentageAvailable.toFixed(1)}% do salário ainda está livre
+          </p>
         </div>
 
         {/* Progress Bar */}
@@ -62,15 +68,15 @@ export function RealityCard({
           <div className="h-3 bg-gray-100 rounded-full overflow-hidden flex">
             <div
               className="h-full bg-orange-500"
-              style={{ width: `${(installmentsTotal / netSalary) * 100}%` }}
+              style={{ width: `${installmentsPercent}%` }}
             />
             <div
               className="h-full bg-blue-500"
-              style={{ width: `${(fixedTotal / netSalary) * 100}%` }}
+              style={{ width: `${fixedPercent}%` }}
             />
             <div
               className="h-full bg-green-500"
-              style={{ width: `${(availableBalance / netSalary) * 100}%` }}
+              style={{ width: `${availablePercent}%` }}
             />
           </div>
           <div className="flex justify-between text-xs">

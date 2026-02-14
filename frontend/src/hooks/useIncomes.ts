@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { incomeService, CreateIncomeData } from '@/services/income.service';
 import { Income } from '@/types';
 

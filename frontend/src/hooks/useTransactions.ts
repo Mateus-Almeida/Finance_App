@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { transactionService, CreateTransactionData } from '@/services/transaction.service';
 import { Transaction, MonthlySummary, ProjectionData } from '@/types';
 
