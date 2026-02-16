@@ -8,9 +8,11 @@ import { TransactionsModule } from "./transactions/transactions.module";
 import { IncomesModule } from "./incomes/incomes.module";
 import { InstallmentsModule } from "./installments/installments.module";
 import { LoggerMiddleware } from "./common/middleware/logger.middleware";
+import { HealthController } from "./health.controller";
 
 const isDev = process.env.NODE_ENV === "development";
 @Module({
+	controllers: [HealthController],
 	imports: [
 		ConfigModule.forRoot({
 			isGlobal: true,
