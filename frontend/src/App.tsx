@@ -5,6 +5,7 @@ import { Overview } from '@/pages/Overview';
 import { EntriesPage } from '@/pages/Entries';
 import { InstallmentsPage } from '@/pages/InstallmentsPage';
 import { CategoriesPage } from '@/pages/CategoriesPage';
+import { UsersPage } from '@/pages/UsersPage';
 import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { authService } from '@/services/auth.service';
 
@@ -15,6 +16,21 @@ import { authService } from '@/services/auth.service';
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = authService.isAuthenticated();
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = authService.isAuthenticated();
+  const isAdmin = authService.isAdmin();
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" />;
+  }
+  
+  return <>{children}</>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -51,6 +67,14 @@ function App() {
           <Route path="entries" element={<EntriesPage />} />
           <Route path="installments" element={<InstallmentsPage />} />
           <Route path="categories" element={<CategoriesPage />} />
+          <Route
+            path="users"
+            element={
+              <AdminRoute>
+                <UsersPage />
+              </AdminRoute>
+            }
+          />
           <Route index element={<Navigate to="/dashboard" />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" />} />

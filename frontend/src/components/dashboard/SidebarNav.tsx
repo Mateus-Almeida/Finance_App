@@ -1,5 +1,6 @@
-import { LayoutDashboard, Wallet, Layers, CalendarClock, LogOut } from 'lucide-react';
+import { LayoutDashboard, Wallet, Layers, CalendarClock, LogOut, Users } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import { authService } from '@/services/auth.service';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
@@ -8,11 +9,17 @@ const NAV_ITEMS = [
   { label: 'Categorias', icon: Layers, path: '/categories' },
 ];
 
+const ADMIN_NAV_ITEMS = [
+  { label: 'Usuários', icon: Users, path: '/users' },
+];
+
 interface SidebarNavProps {
   onLogout: () => void;
 }
 
 export function SidebarNav({ onLogout }: SidebarNavProps) {
+  const isAdmin = authService.isAdmin();
+
   return (
     <aside className="hidden w-20 flex-col items-center justify-between bg-[#020817] py-8 text-white shadow-2xl lg:flex">
       <div className="flex flex-col items-center gap-8">
@@ -37,6 +44,27 @@ export function SidebarNav({ onLogout }: SidebarNavProps) {
               </NavLink>
             );
           })}
+          {isAdmin &&
+            ADMIN_NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `flex h-12 w-12 items-center justify-center rounded-2xl transition-all duration-200 ${
+                      isActive
+                        ? 'bg-white text-[#020817] shadow-lg'
+                        : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                    }`
+                  }
+                  title={item.label}
+                >
+                  <Icon className="h-5 w-5" />
+                </NavLink>
+              );
+            })}
         </nav>
       </div>
 

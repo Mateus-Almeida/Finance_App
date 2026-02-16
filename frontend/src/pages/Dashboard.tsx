@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/utils/format';
+import { chartTooltipStyle } from '@/components/charts/CustomTooltip';
 
 const palette = ['#7c3aed', '#06b6d4', '#10b981', '#f97316'];
 const sparkColors = {
@@ -130,7 +131,7 @@ export default function Dashboard() {
                 </Pie>
                 <Tooltip
                   formatter={(value: number) => formatCurrency(value)}
-                  contentStyle={{ borderRadius: 16, borderColor: '#e2e8f0' }}
+                  {...chartTooltipStyle}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -175,7 +176,7 @@ export default function Dashboard() {
                 <YAxis stroke="#94a3b8" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip
                   formatter={(value: number) => formatCurrency(value)}
-                  contentStyle={{ borderRadius: 16, borderColor: '#e2e8f0' }}
+                  {...chartTooltipStyle}
                 />
                 <Line
                   type="monotone"
@@ -244,7 +245,7 @@ export default function Dashboard() {
                 <XAxis dataKey="month" stroke="#94a3b8" />
                 <YAxis stroke="#94a3b8" />
                 <Tooltip
-                  contentStyle={{ borderRadius: 16, borderColor: '#e2e8f0' }}
+                  {...chartTooltipStyle}
                   formatter={(value: number) => formatCurrency(value)}
                 />
                 <Area type="monotone" dataKey="value" stroke="#7c3aed" fill="url(#colorFixed)" />
@@ -337,7 +338,7 @@ function SparkCard({
             </defs>
             <Tooltip
               formatter={(value: number) => formatCurrency(value * 1000)}
-              contentStyle={{ borderRadius: 12, borderColor: '#e5e7eb' }}
+              {...chartTooltipStyle}
             />
             <Area
               type="monotone"

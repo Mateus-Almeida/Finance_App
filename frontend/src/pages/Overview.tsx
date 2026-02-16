@@ -11,6 +11,14 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { formatCurrency, formatMonthYear, getCurrentMonth, getCurrentYear } from '@/utils/format';
+import { useTransactions } from '@/hooks/useTransactions';
+import { useIncomes } from '@/hooks/useIncomes';
+import { installmentService } from '@/services/installment.service';
+import { Installment, CategoryType, Transaction, Income } from '@/types';
+import { useTheme } from '@/theme';
+import { toast } from 'sonner';
+import { chartTooltipStyle } from '@/components/charts/CustomTooltip';
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -25,14 +33,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatCurrency, formatMonthYear, getCurrentMonth, getCurrentYear } from '@/utils/format';
 import { cn } from '@/lib/utils';
-import { useTransactions } from '@/hooks/useTransactions';
-import { useIncomes } from '@/hooks/useIncomes';
-import { installmentService } from '@/services/installment.service';
-import { Installment, CategoryType, Transaction, Income } from '@/types';
-import { useTheme } from '@/theme';
-import { toast } from 'sonner';
 
 const areaColors = {
   fixed: '#6366f1',
@@ -566,7 +567,7 @@ function MetricSparkCard({
               </defs>
               <Tooltip
                 cursor={{ strokeDasharray: '3 3' }}
-                contentStyle={{ borderRadius: 16, borderColor: '#e2e8f0' }}
+                {...chartTooltipStyle}
                 formatter={(value: number) => formatCurrency(value)}
               />
               <Area type="monotone" dataKey="value" stroke={color} strokeWidth={2} fill={`url(#${gradientId})`} />
@@ -756,7 +757,7 @@ function MonthlyLineCard({
             />
             <Tooltip
               formatter={(value: number) => formatCurrency(value)}
-              contentStyle={{ borderRadius: 16, borderColor: '#e2e8f0' }}
+              {...chartTooltipStyle}
             />
             <Line
               type="monotone"
@@ -812,7 +813,7 @@ function ExpenseStackCard({ data }: { data: { label: string; fixed: number; inst
             <YAxis stroke="#94a3b8" tickLine={false} axisLine={false} tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
             <Tooltip
               formatter={(value: number) => formatCurrency(value)}
-              contentStyle={{ borderRadius: 16, borderColor: '#e2e8f0' }}
+              {...chartTooltipStyle}
             />
             <Area type="monotone" dataKey="fixed" stroke={areaColors.fixed} fill="url(#fixedGradient)" />
             <Area type="monotone" dataKey="installments" stroke={areaColors.installments} fill="url(#installmentGradient)" />

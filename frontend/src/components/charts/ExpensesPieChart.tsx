@@ -2,6 +2,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Transaction } from '@/types';
 import { formatCurrency } from '@/utils/format';
+import { chartTooltipStyle } from './CustomTooltip';
 
 const COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#ef4444'];
 
@@ -40,8 +41,8 @@ export function ExpensesPieChart({ transactions }: ExpensesPieChartProps) {
                 ))}
               </Pie>
               <Tooltip
+                {...chartTooltipStyle}
                 formatter={(value: number) => formatCurrency(value)}
-                contentStyle={{ borderRadius: 12, borderColor: '#e5e7eb' }}
               />
             </PieChart>
           </ResponsiveContainer>

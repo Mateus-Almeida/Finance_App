@@ -10,6 +10,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/utils/format';
 import { Transaction } from '@/types';
+import { chartTooltipStyle } from './CustomTooltip';
 
 interface SpendingTrendChartProps {
   transactions: Transaction[];
@@ -37,9 +38,9 @@ export function SpendingTrendChart({ transactions }: SpendingTrendChartProps) {
               tickFormatter={(value) => formatCurrency(value).replace('R$', 'R$ ')}
             />
             <Tooltip
+              {...chartTooltipStyle}
               formatter={(value: number) => formatCurrency(value)}
               labelFormatter={(label) => `Dia ${label}`}
-              contentStyle={{ borderRadius: 12, borderColor: '#e5e7eb' }}
             />
             <Line
               type="monotone"

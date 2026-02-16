@@ -36,4 +36,9 @@ export const authService = {
   isAuthenticated(): boolean {
     return !!this.getToken();
   },
+
+  isAdmin(): boolean {
+    const user = this.getUser();
+    return user?.role === 'ADMIN';
+  },
 };

@@ -8,10 +8,16 @@ export enum CategoryType {
   DEBTS_INVESTMENTS = 'DEBTS_INVESTMENTS',
 }
 
+export enum UserRole {
+  ADMIN = 'ADMIN',
+  NORMAL = 'NORMAL',
+}
+
 export interface User {
   id: string;
   email: string;
   name: string;
+  role?: UserRole;
   createdAt: string;
   updatedAt: string;
 }
@@ -140,6 +146,7 @@ export interface RegisterData {
   email: string;
   password: string;
   name: string;
+  role?: UserRole;
 }
 
 export interface AuthResponse {

@@ -11,6 +11,11 @@ import { Income } from '../../incomes/entities/income.entity';
 import { Category } from '../../categories/entities/category.entity';
 import { Installment } from '../../installments/entities/installment.entity';
 
+export enum UserRole {
+  ADMIN = 'ADMIN',
+  NORMAL = 'NORMAL',
+}
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -24,6 +29,13 @@ export class User {
 
   @Column()
   name: string;
+
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.NORMAL,
+  })
+  role: UserRole;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
