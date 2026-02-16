@@ -1,4 +1,3 @@
-import { Search } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationsBell } from './NotificationsBell';
 import { Installment } from '@/types';

@@ -26,7 +26,6 @@ import {
   Calendar as CalendarIcon,
   CalendarDays,
   LineChart as LineChartIcon,
-  PieChart as PieChartIcon,
   Sparkles,
   TrendingUp,
   Wallet,
@@ -58,11 +57,9 @@ export function Overview() {
     transactions,
     summary,
     projection,
-    categorySummary,
     fetchTransactions,
     fetchSummary,
     fetchProjection,
-    fetchCategorySummary,
     isLoading: isLoadingTransactions,
   } = useTransactions();
 
@@ -95,7 +92,6 @@ export function Overview() {
         fetchTransactions(isYearView ? undefined : selectedMonth, isYearView ? undefined : selectedYear),
         fetchSummary(selectedMonth, selectedYear),
         fetchProjection(monthsToFetch),
-        fetchCategorySummary(isYearView ? undefined : selectedMonth, isYearView ? undefined : selectedYear),
         fetchIncomes(isYearView ? undefined : selectedMonth, isYearView ? undefined : selectedYear),
         fetchTotal(selectedMonth, selectedYear),
         loadInstallments(),
@@ -107,7 +103,6 @@ export function Overview() {
     fetchTransactions,
     fetchSummary,
     fetchProjection,
-    fetchCategorySummary,
     fetchIncomes,
     fetchTotal,
     loadInstallments,
@@ -159,9 +154,9 @@ export function Overview() {
 
   const totalsBarData = useMemo(
     () => [
-      { label: 'Receitas', value: netSalary, color: '#22c55e' },
-      { label: 'Despesas', value: totalExpenses, color: '#ef4444' },
-      { label: 'Saldo', value: availableBalance, color: '#a855f7' },
+      { label: 'Receitas', value: netSalary, color: '#22c55e', icon: 'trending-up' },
+      { label: 'Despesas', value: totalExpenses, color: '#ef4444', icon: 'trending-down' },
+      { label: 'Saldo', value: availableBalance, color: '#a855f7', icon: 'wallet' },
     ],
     [availableBalance, netSalary, totalExpenses],
   );
@@ -377,16 +372,6 @@ export function Overview() {
   const yearsOptions = Array.from({ length: 5 }, (_, index) => getCurrentYear() - 2 + index);
 
   const isLoading = isSyncing || isLoadingTransactions || isLoadingIncomes;
-
-  const categoryChartData = useMemo(() => {
-    if (!categorySummary.length) return [];
-    return categorySummary.map((cat) => ({
-      name: cat.name,
-      value: cat.total,
-      color: cat.color || '#6366f1',
-      count: cat.count,
-    }));
-  }, [categorySummary]);
 
   const handleToggleInstallment = useCallback(
     async (installment: Installment) => {
@@ -868,56 +853,6 @@ function CategoryBarCard(
                 </div>
               ))}
             </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function CategoryBreakdownCard({ data }: { data: { name: string; value: number; color: string; count: number }[] }) {
-  const total = data.reduce((sum, item) => sum + item.value, 0);
-  
-  return (
-    <Card className="rounded-[28px] border bg-card/90">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <PieChartIcon className="h-5 w-5 text-primary" /> Por categoria
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">Gastos por categoria do período</p>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {data.length === 0 ? (
-          <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
-            Cadastre transações para visualizar.
-          </div>
-        ) : (
-          <>
-            {data.slice(0, 8).map((item) => (
-              <div key={item.name} className="flex items-center gap-3">
-                <div className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="truncate text-sm font-medium">{item.name}</p>
-                    <p className="text-sm font-semibold">{formatCurrency(item.value)}</p>
-                  </div>
-                  <div className="mt-1 h-1.5 w-full rounded-full bg-muted">
-                    <div
-                      className="h-1.5 rounded-full"
-                      style={{
-                        width: `${total > 0 ? (item.value / total) * 100 : 0}%`,
-                        backgroundColor: item.color,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-            {data.length > 8 && (
-              <p className="text-xs text-muted-foreground text-center pt-2">
-                + {data.length - 8} categorias
-              </p>
-            )}
           </>
         )}
       </CardContent>
