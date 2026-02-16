@@ -29,7 +29,6 @@ services:
     ports:
       - "3001:3001"
     environment:
-      - NODE_ENV=production
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_NAME=finance_tracker
@@ -53,7 +52,6 @@ services:
       - "80:80"
     environment:
       - VITE_API_URL=http://localhost/api
-      - VITE_NODE_ENV=production
     depends_on:
       - backend
 

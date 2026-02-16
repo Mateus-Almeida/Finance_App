@@ -153,7 +153,6 @@ DB_PASSWORD=sua_senha
 
 # App
 PORT=3001
-NODE_ENV=development
 JWT_SECRET=sua_chave_secreta_jwt
 JWT_EXPIRATION=7d
 
@@ -165,7 +164,6 @@ FRONTEND_URL=http://localhost:5173
 
 ```env
 VITE_API_URL=http://localhost:3001/api
-VITE_NODE_ENV=development
 ```
 
 ## API Endpoints
@@ -344,7 +342,6 @@ DB_USERNAME=postgres
 DB_PASSWORD=sua_senha
 
 PORT=3001
-NODE_ENV=production
 JWT_SECRET=sua_chave_secreta_jwt
 JWT_EXPIRATION=7d
 FRONTEND_URL=http://localhost
@@ -353,7 +350,6 @@ FRONTEND_URL=http://localhost
 #### Frontend (.env.prod)
 ```env
 VITE_API_URL=http://localhost/api
-VITE_NODE_ENV=production
 ```
 
 ### Build Manual
