@@ -1,4 +1,4 @@
-import { Controller, Get, Body, Patch, Delete, UseGuards, Request, Post } from '@nestjs/common';
+import { Controller, Get, Body, Patch, Delete, UseGuards, Request, Post, Param } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -25,6 +25,19 @@ export class UsersController {
   @Post()
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
+  }
+
+  @ApiOperation({ summary: 'Atualizar usuário por ID (apenas admin)' })
+  @ApiBody({ type: UpdateUserDto })
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    return this.usersService.update(id, updateUserDto);
+  }
+
+  @ApiOperation({ summary: 'Excluir usuário por ID (apenas admin)' })
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.usersService.remove(id);
   }
 
   @ApiOperation({ summary: 'Obter perfil do usuário autenticado' })

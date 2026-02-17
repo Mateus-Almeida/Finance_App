@@ -29,6 +29,8 @@ import {
   Sparkles,
   TrendingUp,
   Wallet,
+  ArrowDownCircle,
+  ArrowUpCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -154,8 +156,8 @@ export function Overview() {
 
   const totalsBarData = useMemo(
     () => [
-      { label: 'Receitas', value: netSalary, color: '#22c55e', icon: 'trending-up' },
-      { label: 'Despesas', value: totalExpenses, color: '#ef4444', icon: 'trending-down' },
+      { label: 'Receitas', value: netSalary, color: '#22c55e', icon: 'arrow-up' },
+      { label: 'Despesas', value: totalExpenses, color: '#ef4444', icon: 'arrow-down' },
       { label: 'Saldo', value: availableBalance, color: '#a855f7', icon: 'wallet' },
     ],
     [availableBalance, netSalary, totalExpenses],
@@ -567,6 +569,19 @@ function MetricSparkCard({
 function TotalsBarCard({ data }: { data: { label: string; value: number; color: string; icon: string }[] }) {
   const maxValue = Math.max(...data.map(d => d.value), 1);
   
+  const getIcon = (iconName: string, color: string) => {
+    switch (iconName) {
+      case 'arrow-up':
+        return <ArrowUpCircle className="h-5 w-5" style={{ color }} />;
+      case 'arrow-down':
+        return <ArrowDownCircle className="h-5 w-5" style={{ color }} />;
+      case 'wallet':
+        return <Wallet className="h-5 w-5" style={{ color }} />;
+      default:
+        return <TrendingUp className="h-5 w-5" style={{ color }} />;
+    }
+  };
+  
   return (
     <Card className="rounded-[28px] border bg-card/90 overflow-hidden">
       <CardHeader className="pb-2">
@@ -580,7 +595,7 @@ function TotalsBarCard({ data }: { data: { label: string; value: number; color: 
           <div key={item.label} className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-lg">{item.icon}</span>
+                {getIcon(item.icon, item.color)}
                 <span className="font-medium">{item.label}</span>
               </div>
               <span className="text-lg font-bold" style={{ color: item.color }}>

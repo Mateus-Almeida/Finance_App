@@ -49,13 +49,36 @@ export function CreateTransactionModal({
     isPaid: false,
   });
 
+  const parseDateForInput = (dateString: string | Date): string => {
+    if (!dateString) return new Date().toISOString().split('T')[0];
+    
+    const dateStr = String(dateString);
+    
+    if (dateStr.includes('T')) {
+      return dateStr.split('T')[0];
+    }
+    
+    if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return dateStr;
+    }
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return new Date().toISOString().split('T')[0];
+    
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  };
+
   useEffect(() => {
     if (editTransaction) {
       setForm({
         categoryId: editTransaction.categoryId || categories[0]?.id || '',
         description: editTransaction.description,
         amount: String(editTransaction.amount),
-        transactionDate: new Date(editTransaction.transactionDate).toISOString().split('T')[0],
+        transactionDate: parseDateForInput(editTransaction.transactionDate),
         isFixed: editTransaction.isFixed,
         isInstallment: editTransaction.isInstallment,
         totalInstallments: 1,
@@ -90,14 +113,13 @@ export function CreateTransactionModal({
       return;
     }
 
-    const date = new Date(form.transactionDate);
     const payload = {
       categoryId: form.categoryId,
       description: form.description,
       amount: Number(form.amount),
-      transactionDate: date.toISOString(),
-      month: date.getMonth() + 1,
-      year: date.getFullYear(),
+      transactionDate: form.transactionDate,
+      month: parseInt(form.transactionDate.split('-')[1]),
+      year: parseInt(form.transactionDate.split('-')[0]),
       isFixed: form.isFixed,
       isInstallment: form.isInstallment,
       totalInstallments: form.isInstallment ? form.totalInstallments : 1,
@@ -174,12 +196,15 @@ export function CreateTransactionModal({
         </div>
         <div className="space-y-2">
           <Label htmlFor="date">Data</Label>
-          <Input
-            id="date"
-            type="date"
-            value={form.transactionDate}
-            onChange={(e) => setForm((prev) => ({ ...prev, transactionDate: e.target.value }))}
-          />
+          <div className="relative">
+            <Input
+              id="date"
+              type="date"
+              style={{ colorScheme: 'light' }}
+              value={form.transactionDate}
+              onChange={(e) => setForm((prev) => ({ ...prev, transactionDate: e.target.value }))}
+            />
+          </div>
         </div>
       </div>
 

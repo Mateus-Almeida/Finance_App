@@ -138,6 +138,23 @@ export function EntriesPage() {
     });
   };
 
+  const handleTogglePaid = (id: string, currentStatus: boolean) => {
+    const newStatus = !currentStatus;
+    setConfirmDialog({
+      open: true,
+      title: newStatus ? 'Marcar como pago' : 'Marcar como não pago',
+      description: newStatus 
+        ? 'Tem certeza que deseja marcar esta transação como paga?' 
+        : 'Tem certeza que deseja marcar esta transação como não paga?',
+      onConfirm: async () => {
+        await updateTransaction(id, { isPaid: newStatus });
+        toast.success(newStatus ? 'Transação marcada como paga' : 'Transação marcada como não paga');
+        fetchTransactions();
+        setConfirmDialog((prev) => ({ ...prev, open: false }));
+      },
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-3">
@@ -151,6 +168,7 @@ export function EntriesPage() {
           transactions={transactions}
           onDelete={handleDeleteTransaction}
           onEdit={handleEditTransaction}
+          onTogglePaid={handleTogglePaid}
         />
         <IncomeSchedule
           incomes={incomes}

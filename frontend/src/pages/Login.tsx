@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,14 @@ export function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [showPassword, setShowPassword] = useState(false);
+  const [version, setVersion] = useState('');
+
+  useEffect(() => {
+    fetch('/version.json')
+      .then(res => res.json())
+      .then(data => setVersion(data.buildDate || ''))
+      .catch(() => setVersion(''));
+  }, []);
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -255,15 +263,15 @@ export function Login() {
               <p className="text-xs text-muted-foreground text-center">
                 Desenvolvido por{' '}
                 <a
-                  href="https://github.com/Mateus-Almeida"
+                  href="https://www.linkedin.com/in/mateus-almeida-m147258/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary hover:underline font-medium"
                 >
                   Mateus-Almeida
                 </a>
+                {version && <span className="ml-1">• v{version}</span>}
               </p>
-
           </div>
         </div>
       </div>

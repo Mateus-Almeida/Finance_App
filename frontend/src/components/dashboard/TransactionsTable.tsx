@@ -7,6 +7,7 @@ interface TransactionsTableProps {
   transactions: Transaction[];
   onDelete: (id: string, description: string) => void;
   onEdit: (transaction: Transaction) => void;
+  onTogglePaid: (id: string, currentStatus: boolean) => void;
 }
 
 function getStatus(transaction: Transaction): { label: string; color: string; icon: JSX.Element } {
@@ -29,7 +30,7 @@ function getStatus(transaction: Transaction): { label: string; color: string; ic
   return { label: 'Pendente', color: 'text-yellow-500 bg-yellow-500/10', icon: <Clock className="h-3 w-3" /> };
 }
 
-export function TransactionsTable({ transactions, onDelete, onEdit }: TransactionsTableProps) {
+export function TransactionsTable({ transactions, onDelete, onEdit, onTogglePaid }: TransactionsTableProps) {
   return (
     <div className="rounded-2xl border bg-card p-5">
       <div className="flex items-center justify-between">
@@ -40,9 +41,9 @@ export function TransactionsTable({ transactions, onDelete, onEdit }: Transactio
           <h3 className="text-xl font-semibold">Transações recentes</h3>
         </div>
       </div>
-      <div className="mt-4 overflow-auto">
+      <div className="mt-4 max-h-[400px] overflow-y-auto">
         <table className="min-w-full text-sm">
-          <thead>
+          <thead className="sticky top-0 bg-card">
             <tr className="text-left text-muted-foreground">
               <th className="px-3 py-2">Descrição</th>
               <th className="px-3 py-2">Categoria</th>
@@ -78,10 +79,14 @@ export function TransactionsTable({ transactions, onDelete, onEdit }: Transactio
                       {formatCurrency(Number(transaction.amount))}
                     </td>
                     <td className="px-3 py-3">
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs ${status.color}`}>
+                      <button
+                        onClick={() => onTogglePaid(transaction.id, transaction.isPaid || false)}
+                        className={`inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-xs transition hover:opacity-80 ${status.color}`}
+                        title={transaction.isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
+                      >
                         {status.icon}
                         {status.label}
-                      </span>
+                      </button>
                     </td>
                     <td className="px-3 py-3 text-center text-xs text-muted-foreground">
                       {transaction.isInstallment ? 'Parcelado' : transaction.isFixed ? 'Fixo' : 'Avulso'}
