@@ -62,7 +62,7 @@ export function TransactionsTable({ transactions, onDelete, onEdit, onTogglePaid
                 </td>
               </tr>
             ) : (
-              transactions.slice(0, 8).map((transaction) => {
+              transactions.map((transaction) => {
                 const status = getStatus(transaction);
                 return (
                   <tr key={transaction.id} className="border-t">
