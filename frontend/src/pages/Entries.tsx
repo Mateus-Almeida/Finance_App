@@ -8,6 +8,7 @@ import { CreateTransactionModal } from '@/components/dashboard/CreateTransaction
 import { CreateIncomeModal } from '@/components/dashboard/CreateIncomeModal';
 import { TransactionsTable } from '@/components/dashboard/TransactionsTable';
 import { IncomeSchedule } from '@/components/dashboard/IncomeSchedule';
+import { PaymentsHistoryTable } from '@/components/dashboard/PaymentsHistoryTable';
 import { toast } from 'sonner';
 import { Transaction, Income } from '@/types';
 
@@ -59,7 +60,10 @@ export function EntriesPage() {
       await updateTransaction(editingTransaction.id, payload);
       toast.success('Transação atualizada');
       await fetchTransactions();
+      setTransactionModalOpen(false);
       setEditingTransaction(null);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erro ao atualizar transação');
     } finally {
       setModalSaving(false);
     }
@@ -155,6 +159,9 @@ export function EntriesPage() {
     });
   };
 
+  const pendingTransactions = transactions.filter(t => !t.isPaid);
+  const paidTransactions = transactions.filter(t => t.isPaid);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-3">
@@ -165,7 +172,7 @@ export function EntriesPage() {
       </div>
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <TransactionsTable
-          transactions={transactions}
+          transactions={pendingTransactions}
           onDelete={handleDeleteTransaction}
           onEdit={handleEditTransaction}
           onTogglePaid={handleTogglePaid}
@@ -176,6 +183,13 @@ export function EntriesPage() {
           onEdit={handleEditIncome}
         />
       </div>
+      {paidTransactions.length > 0 && (
+        <PaymentsHistoryTable
+          transactions={paidTransactions}
+          onDelete={handleDeleteTransaction}
+          onEdit={handleEditTransaction}
+        />
+      )}
       <CreateTransactionModal
         open={transactionModalOpen}
         onClose={handleCloseTransactionModal}

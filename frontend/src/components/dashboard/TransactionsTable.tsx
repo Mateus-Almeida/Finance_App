@@ -36,9 +36,9 @@ export function TransactionsTable({ transactions, onDelete, onEdit, onTogglePaid
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Fluxo detalhado
+            Pendentes
           </p>
-          <h3 className="text-xl font-semibold">Transações recentes</h3>
+          <h3 className="text-xl font-semibold">Contas a pagar</h3>
         </div>
       </div>
       <div className="mt-4 max-h-[400px] overflow-y-auto">

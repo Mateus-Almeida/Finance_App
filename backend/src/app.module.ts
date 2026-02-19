@@ -10,37 +10,40 @@ import { InstallmentsModule } from "./installments/installments.module";
 import { LoggerMiddleware } from "./common/middleware/logger.middleware";
 import { HealthController } from "./health.controller";
 
-const isDev = process.env.NODE_ENV === "development";
 @Module({
 	controllers: [HealthController],
 	imports: [
 		ConfigModule.forRoot({
 			isGlobal: true,
 		}),
-		TypeOrmModule.forRoot(
-			isDev
-				? {
+		TypeOrmModule.forRootAsync({
+			useFactory: () => {
+				const nodeEnv = process.env.NODE_ENV;
+
+				if (nodeEnv === "development") {
+					return {
 						type: "postgres",
-						host: process.env.DB_HOST || "localhost",
+						host: process.env.DB_HOST,
 						port: parseInt(process.env.DB_PORT ?? "5432", 10),
-						username: process.env.DB_USERNAME || "postgres",
-						password: process.env.DB_PASSWORD || "password",
-						database: process.env.DB_NAME || "finance_tracker",
-						entities: [__dirname + "/**/*.entity{.ts,.js}"],
-						synchronize: false,
-						logging: false,
-					}
-				: {
-						type: "postgres",
-						url: process.env.DATABASE_URL,
-						ssl: {
-							rejectUnauthorized: false,
-						},
+						username: process.env.DB_USERNAME,
+						password: process.env.DB_PASSWORD,
+						database: process.env.DB_NAME,
 						autoLoadEntities: true,
-						synchronize: true,
+						synchronize: false,
 						logging: true,
-					},
-		),
+					};
+				}
+
+				return {
+					type: "postgres",
+					url: process.env.DATABASE_URL,
+					ssl: { rejectUnauthorized: false },
+					autoLoadEntities: true,
+					synchronize: true,
+					logging: true,
+				};
+			},
+		}),
 
 		AuthModule,
 		UsersModule,

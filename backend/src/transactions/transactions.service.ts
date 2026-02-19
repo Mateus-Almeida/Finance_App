@@ -227,8 +227,31 @@ export class TransactionsService {
       );
     }
 
-    Object.assign(transaction, updateTransactionDto);
-    return this.transactionRepository.save(transaction);
+    // Atualiza os campos simples
+    if (updateTransactionDto.categoryId) {
+      const newCategory = await this.categoryRepository.findOne({
+        where: { id: updateTransactionDto.categoryId },
+      });
+      if (newCategory) {
+        transaction.category = newCategory;
+        transaction.categoryId = newCategory.id;
+      }
+    }
+    
+    if (updateTransactionDto.description) transaction.description = updateTransactionDto.description;
+    if (updateTransactionDto.amount) transaction.amount = updateTransactionDto.amount;
+    if (updateTransactionDto.transactionDate) transaction.transactionDate = new Date(updateTransactionDto.transactionDate);
+    if (updateTransactionDto.month) transaction.month = updateTransactionDto.month;
+    if (updateTransactionDto.year) transaction.year = updateTransactionDto.year;
+    if (updateTransactionDto.isFixed !== undefined) transaction.isFixed = updateTransactionDto.isFixed;
+    if (updateTransactionDto.isInstallment !== undefined) transaction.isInstallment = updateTransactionDto.isInstallment;
+    if (updateTransactionDto.totalInstallments) transaction.totalInstallments = updateTransactionDto.totalInstallments;
+    if (updateTransactionDto.isPaid !== undefined) transaction.isPaid = updateTransactionDto.isPaid;
+
+    await this.transactionRepository.save(transaction);
+    
+    // Busca novamente para garantir que a relação está atualizada
+    return this.findOne(id, userId);
   }
 
   /**

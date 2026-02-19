@@ -73,23 +73,42 @@ export function CreateTransactionModal({
   };
 
   useEffect(() => {
-    if (editTransaction) {
+    if (!open) {
       setForm({
-        categoryId: editTransaction.categoryId || categories[0]?.id || '',
-        description: editTransaction.description,
-        amount: String(editTransaction.amount),
-        transactionDate: parseDateForInput(editTransaction.transactionDate),
-        isFixed: editTransaction.isFixed,
-        isInstallment: editTransaction.isInstallment,
+        categoryId: categories[0]?.id || '',
+        description: '',
+        amount: '',
+        transactionDate: new Date().toISOString().split('T')[0],
+        isFixed: false,
+        isInstallment: false,
         totalInstallments: 1,
         repeatMonthly: false,
         repeatMonths: 1,
-        isPaid: (editTransaction as any).isPaid || false,
+        isPaid: false,
       });
-    } else if (categories.length > 0 && !form.categoryId) {
-      setForm((prev) => ({ ...prev, categoryId: categories[0].id }));
     }
-  }, [editTransaction, categories]);
+  }, [open, categories]);
+
+  useEffect(() => {
+    if (open) {
+      if (editTransaction) {
+        setForm({
+          categoryId: editTransaction.categoryId || categories[0]?.id || '',
+          description: editTransaction.description,
+          amount: String(editTransaction.amount),
+          transactionDate: parseDateForInput(editTransaction.transactionDate),
+          isFixed: editTransaction.isFixed,
+          isInstallment: editTransaction.isInstallment,
+          totalInstallments: editTransaction.totalInstallments || 1,
+          repeatMonthly: false,
+          repeatMonths: 1,
+          isPaid: editTransaction.isPaid || false,
+        });
+      } else if (categories.length > 0 && !form.categoryId) {
+        setForm((prev) => ({ ...prev, categoryId: categories[0].id }));
+      }
+    }
+  }, [editTransaction, categories, open]);
 
   const handleSubmit = async () => {
     if (!form.categoryId) {

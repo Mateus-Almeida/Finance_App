@@ -30,7 +30,7 @@ export interface CategorySummary {
 
 export const transactionService = {
   async getAll(month?: number, year?: number): Promise<Transaction[]> {
-    const params = month && year ? { month, year } : {};
+    const params: any = month && year ? { month, year } : {};
     const response = await api.get('/transactions', { params });
     return response.data;
   },
