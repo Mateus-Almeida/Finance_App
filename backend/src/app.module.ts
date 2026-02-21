@@ -44,7 +44,7 @@ import { HealthController } from "./health.controller";
 					url: process.env.DATABASE_URL,
 					ssl: { rejectUnauthorized: false },
 					autoLoadEntities: true,
-					synchronize: true,
+					synchronize: false,
 				};
 			},
 		}),
