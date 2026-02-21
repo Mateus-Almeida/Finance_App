@@ -1,13 +1,8 @@
 import api from './api';
-import { Category, CategoryType } from '@/types';
-
-// ============================================
-// SERVIÇO DE CATEGORIAS
-// ============================================
+import { Category } from '@/types';
 
 export interface CreateCategoryData {
   name: string;
-  type: CategoryType;
   color?: string;
   icon?: string;
 }
@@ -15,11 +10,6 @@ export interface CreateCategoryData {
 export const categoryService = {
   async getAll(): Promise<Category[]> {
     const response = await api.get('/categories');
-    return response.data;
-  },
-
-  async getByType(type: CategoryType): Promise<Category[]> {
-    const response = await api.get('/categories', { params: { type } });
     return response.data;
   },
 

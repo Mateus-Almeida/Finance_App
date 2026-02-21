@@ -1,4 +1,4 @@
-import { LayoutDashboard, Wallet, Layers, CalendarClock, LogOut, Users } from 'lucide-react';
+import { LayoutDashboard, Wallet, Layers, CalendarClock, LogOut, Users, CreditCard, Target, TrendingUp } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { authService } from '@/services/auth.service';
 
@@ -7,6 +7,10 @@ const NAV_ITEMS = [
   { label: 'Lançamentos', icon: Wallet, path: '/entries' },
   { label: 'Parcelas', icon: CalendarClock, path: '/installments' },
   { label: 'Categorias', icon: Layers, path: '/categories' },
+  { label: 'Meios de Pagamento', icon: CreditCard, path: '/payment-methods' },
+  { label: 'Cartões', icon: CreditCard, path: '/cards' },
+  { label: 'Metas', icon: Target, path: '/goals' },
+  { label: 'Investimentos', icon: TrendingUp, path: '/investments' },
 ];
 
 const ADMIN_NAV_ITEMS = [

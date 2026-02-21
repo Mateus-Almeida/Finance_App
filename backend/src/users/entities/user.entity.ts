@@ -10,6 +10,11 @@ import { Transaction } from '../../transactions/entities/transaction.entity';
 import { Income } from '../../incomes/entities/income.entity';
 import { Category } from '../../categories/entities/category.entity';
 import { Installment } from '../../installments/entities/installment.entity';
+import { SavingsBox } from '../../savings-box/entities/savings-box.entity';
+import { PaymentMethod } from '../../payment-methods/entities/payment-method.entity';
+import { Goal } from '../../goals/entities/goal.entity';
+import { InvestmentAsset } from '../../investments/entities/investment-asset.entity';
+import { InvestmentMovement } from '../../investments/entities/investment-movement.entity';
 
 export enum UserRole {
   ADMIN = 'ADMIN',
@@ -54,4 +59,19 @@ export class User {
 
   @OneToMany(() => Installment, (installment) => installment.user)
   installments: Installment[];
+
+  @OneToMany(() => SavingsBox, (savingsBox) => savingsBox.user)
+  savingsBoxes: SavingsBox[];
+
+  @OneToMany(() => PaymentMethod, (paymentMethod) => paymentMethod.user)
+  paymentMethods: PaymentMethod[];
+
+  @OneToMany(() => Goal, (goal) => goal.user)
+  goals: Goal[];
+
+  @OneToMany(() => InvestmentAsset, (asset) => asset.user)
+  investmentAssets: InvestmentAsset[];
+
+  @OneToMany(() => InvestmentMovement, (movement) => movement.user)
+  investmentMovements: InvestmentMovement[];
 }

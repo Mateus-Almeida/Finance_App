@@ -1,6 +1,5 @@
-import { IsString, IsEnum, IsOptional } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
-import { CategoryType } from '../entities/category.entity';
+import { IsString, IsOptional } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateCategoryDto {
   @ApiProperty({
@@ -9,14 +8,6 @@ export class CreateCategoryDto {
   })
   @IsString()
   name: string;
-
-  @ApiProperty({
-    description: 'Tipo da categoria',
-    enum: CategoryType,
-    example: CategoryType.ESSENTIAL,
-  })
-  @IsEnum(CategoryType)
-  type: CategoryType;
 
   @ApiProperty({
     description: 'Cor hexadecimal usada na UI',
@@ -34,5 +25,22 @@ export class CreateCategoryDto {
   })
   @IsString()
   @IsOptional()
+  icon?: string;
+}
+
+export class UpdateCategoryDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  color?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   icon?: string;
 }

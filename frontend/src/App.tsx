@@ -6,6 +6,10 @@ import { EntriesPage } from '@/pages/Entries';
 import { InstallmentsPage } from '@/pages/InstallmentsPage';
 import { CategoriesPage } from '@/pages/CategoriesPage';
 import { UsersPage } from '@/pages/UsersPage';
+import { PaymentMethodsPage } from '@/pages/PaymentMethodsPage';
+import { CardsPage } from '@/pages/CardsPage';
+import { GoalsPage } from '@/pages/GoalsPage';
+import { InvestmentsPage } from '@/pages/InvestmentsPage';
 import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { authService } from '@/services/auth.service';
 
@@ -67,6 +71,10 @@ function App() {
           <Route path="entries" element={<EntriesPage />} />
           <Route path="installments" element={<InstallmentsPage />} />
           <Route path="categories" element={<CategoriesPage />} />
+          <Route path="payment-methods" element={<PaymentMethodsPage />} />
+          <Route path="cards" element={<CardsPage />} />
+          <Route path="goals" element={<GoalsPage />} />
+          <Route path="investments" element={<InvestmentsPage />} />
           <Route
             path="users"
             element={

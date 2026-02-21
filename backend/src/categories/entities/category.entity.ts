@@ -11,10 +11,17 @@ import {
 import { User } from '../../users/entities/user.entity';
 import { Transaction } from '../../transactions/entities/transaction.entity';
 
-export enum CategoryType {
-  ESSENTIAL = 'ESSENTIAL',
-  LIFESTYLE = 'LIFESTYLE',
-  DEBTS_INVESTMENTS = 'DEBTS_INVESTMENTS',
+export enum TransactionType {
+  EXPENSE = 'EXPENSE',
+  INCOME = 'INCOME',
+  INVESTMENT = 'INVESTMENT',
+}
+
+export interface CategoryGroup {
+  id: string;
+  name: string;
+  color: string;
+  icon?: string;
 }
 
 @Entity('categories')
@@ -24,12 +31,6 @@ export class Category {
 
   @Column()
   name: string;
-
-  @Column({
-    type: 'enum',
-    enum: CategoryType,
-  })
-  type: CategoryType;
 
   @Column({ default: '#000000' })
   color: string;

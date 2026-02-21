@@ -1,16 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { categoryService, CreateCategoryData } from '@/services/category.service';
-import { Category, CategoryType } from '@/types';
-
-// ============================================
-// HOOK DE CATEGORIAS
-// ============================================
+import { Category } from '@/types';
 
 interface UseCategoriesReturn {
   categories: Category[];
-  essentialCategories: Category[];
-  lifestyleCategories: Category[];
-  debtsInvestmentsCategories: Category[];
   isLoading: boolean;
   error: string | null;
   fetchCategories: () => Promise<void>;
@@ -23,16 +16,6 @@ export function useCategories(): UseCategoriesReturn {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const essentialCategories = categories.filter(
-    (c) => c.type === CategoryType.ESSENTIAL
-  );
-  const lifestyleCategories = categories.filter(
-    (c) => c.type === CategoryType.LIFESTYLE
-  );
-  const debtsInvestmentsCategories = categories.filter(
-    (c) => c.type === CategoryType.DEBTS_INVESTMENTS
-  );
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -95,9 +78,6 @@ export function useCategories(): UseCategoriesReturn {
 
   return {
     categories,
-    essentialCategories,
-    lifestyleCategories,
-    debtsInvestmentsCategories,
     isLoading,
     error,
     fetchCategories,

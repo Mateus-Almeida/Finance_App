@@ -1,11 +1,17 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNumber, IsUUID, IsDateString, IsBoolean, IsOptional, Min, Max } from 'class-validator';
+import { IsString, IsNumber, IsUUID, IsDateString, IsBoolean, IsOptional, IsEnum, Min, Max } from 'class-validator';
+import { TransactionType } from '../../categories/entities/category.entity';
 
 export class UpdateTransactionDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsUUID()
   categoryId?: string;
+
+  @ApiPropertyOptional({ enum: TransactionType })
+  @IsOptional()
+  @IsEnum(TransactionType)
+  type?: TransactionType;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -28,13 +34,13 @@ export class UpdateTransactionDto {
   @IsNumber()
   @Min(1)
   @Max(12)
-  month?: number;
+  competenceMonth?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsNumber()
   @Min(2000)
-  year?: number;
+  competenceYear?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -67,4 +73,14 @@ export class UpdateTransactionDto {
   @IsOptional()
   @IsBoolean()
   isPaid?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  savingsBoxId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  creditCardId?: string;
 }

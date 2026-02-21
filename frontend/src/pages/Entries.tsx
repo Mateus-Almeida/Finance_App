@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useIncomes } from '@/hooks/useIncomes';
 import { useCategories } from '@/hooks/useCategories';
+import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { CreateTransactionModal } from '@/components/dashboard/CreateTransactionModal';
@@ -15,8 +16,8 @@ import { Transaction, Income } from '@/types';
 export function EntriesPage() {
   const { transactions, fetchTransactions, deleteTransaction, createTransaction, updateTransaction } = useTransactions();
   const { incomes, fetchIncomes, deleteIncome, createIncome, updateIncome } = useIncomes();
-
   const { categories, fetchCategories } = useCategories();
+  const { paymentMethods, refetch: fetchPaymentMethods } = usePaymentMethods();
 
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
   const [incomeModalOpen, setIncomeModalOpen] = useState(false);
@@ -40,7 +41,8 @@ export function EntriesPage() {
     fetchTransactions();
     fetchIncomes();
     fetchCategories();
-  }, [fetchTransactions, fetchIncomes, fetchCategories]);
+    fetchPaymentMethods();
+  }, [fetchTransactions, fetchIncomes, fetchCategories, fetchPaymentMethods]);
 
   const handleCreateTransaction = async (payload: Parameters<typeof createTransaction>[0]) => {
     try {
@@ -194,6 +196,7 @@ export function EntriesPage() {
         open={transactionModalOpen}
         onClose={handleCloseTransactionModal}
         categories={categories}
+        paymentMethods={paymentMethods}
         onSubmit={editingTransaction ? handleUpdateTransaction : handleCreateTransaction}
         isSubmitting={modalSaving}
         editTransaction={editingTransaction}

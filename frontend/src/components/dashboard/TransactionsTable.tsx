@@ -50,7 +50,7 @@ export function TransactionsTable({ transactions, onDelete, onEdit, onTogglePaid
               <th className="px-3 py-2">Data</th>
               <th className="px-3 py-2">Valor</th>
               <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Tipo</th>
+              <th className="px-3 py-2">Meio</th>
               <th className="px-3 py-2 text-center">Ações</th>
             </tr>
           </thead>
@@ -88,8 +88,14 @@ export function TransactionsTable({ transactions, onDelete, onEdit, onTogglePaid
                         {status.label}
                       </button>
                     </td>
-                    <td className="px-3 py-3 text-center text-xs text-muted-foreground">
-                      {transaction.isInstallment ? 'Parcelado' : transaction.isFixed ? 'Fixo' : 'Avulso'}
+                    <td className="px-3 py-3 text-center text-xs">
+                      {transaction.paymentMethod ? (
+                        <span className="rounded-full bg-blue-500/10 px-2 py-1 text-blue-500">
+                          {transaction.paymentMethod.name}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
                     </td>
                     <td className="px-3 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">

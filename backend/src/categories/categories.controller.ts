@@ -6,7 +6,6 @@ import {
   Patch,
   Param,
   Delete,
-  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -16,14 +15,12 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
-  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CategoryType } from './entities/category.entity';
 
 @ApiTags('Categories')
 @ApiBearerAuth('JWT-auth')
@@ -41,17 +38,8 @@ export class CategoriesController {
   }
 
   @ApiOperation({ summary: 'Listar categorias por usuário' })
-  @ApiQuery({
-    name: 'type',
-    required: false,
-    description: 'Filtrar por tipo de categoria',
-    enum: CategoryType,
-  })
   @Get()
-  findAll(@Request() req, @Query('type') type?: CategoryType) {
-    if (type) {
-      return this.categoriesService.findByType(req.user.userId, type);
-    }
+  findAll(@Request() req) {
     return this.categoriesService.findAll(req.user.userId);
   }
 

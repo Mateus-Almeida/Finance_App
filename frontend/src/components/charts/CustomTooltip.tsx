@@ -7,6 +7,7 @@ const tooltipStyle = {
   border: '1px solid hsl(var(--border))',
   color: 'hsl(var(--card-foreground))',
   boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+  padding: '8px 12px',
 };
 
 export function CustomTooltip({ active, payload, label }: TooltipProps<number, string>) {

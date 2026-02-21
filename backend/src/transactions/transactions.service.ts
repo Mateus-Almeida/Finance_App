@@ -4,10 +4,13 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Transaction } from './entities/transaction.entity';
 import { Installment } from '../installments/entities/installment.entity';
-import { Category, CategoryType } from '../categories/entities/category.entity';
+import { Category } from '../categories/entities/category.entity';
+import { SavingsBox } from '../savings-box/entities/savings-box.entity';
+import { Income } from '../incomes/entities/income.entity';
+import { TransactionType } from '../categories/entities/category.entity';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { v4 as uuidv4 } from 'uuid';
@@ -21,32 +24,35 @@ export class TransactionsService {
     private installmentRepository: Repository<Installment>,
     @InjectRepository(Category)
     private categoryRepository: Repository<Category>,
+    @InjectRepository(SavingsBox)
+    private savingsBoxRepository: Repository<SavingsBox>,
+    @InjectRepository(Income)
+    private incomeRepository: Repository<Income>,
   ) {}
 
-  /**
-   * Cria uma transação e, se for parcelada, gera os registros individuais de parcelas
-   * Se repeatMonthly for true, cria transações para cada mês
-   */
   async create(
     createTransactionDto: CreateTransactionDto,
     userId: string,
   ): Promise<Transaction | Transaction[]> {
     const {
       categoryId,
+      type,
       description,
       amount,
       transactionDate,
-      month,
-      year,
+      competenceMonth,
+      competenceYear,
       isFixed,
       isInstallment,
       totalInstallments,
       repeatMonthly,
       repeatMonths,
       isPaid,
+      savingsBoxId,
+      creditCardId,
+      paymentMethodId,
     } = createTransactionDto;
 
-    // Verifica se a categoria existe
     const category = await this.categoryRepository.findOne({
       where: { id: categoryId },
     });
@@ -55,34 +61,45 @@ export class TransactionsService {
       throw new NotFoundException('Categoria não encontrada');
     }
 
-    // Se for repetição mensal, cria transações para cada mês
+    if (type === TransactionType.INVESTMENT && savingsBoxId) {
+      const savingsBox = await this.savingsBoxRepository.findOne({
+        where: { id: savingsBoxId, userId },
+      });
+      if (!savingsBox) {
+        throw new NotFoundException('Caixa de ahorro não encontrado');
+      }
+    }
+
     if (repeatMonthly && repeatMonths && repeatMonths > 1) {
       const transactions: Transaction[] = [];
-      let currentMonth = month;
-      let currentYear = year;
+      let currentMonth = competenceMonth;
+      let currentYear = competenceYear;
 
       for (let i = 0; i < repeatMonths; i++) {
         const transactionDateObj = new Date(currentYear, currentMonth - 1, 15);
-        
+
         const transaction = this.transactionRepository.create({
           userId,
           categoryId,
-          description: `${description} (${i + 1}/${repeatMonths})`,
+          type,
+          description,
           amount,
           transactionDate: transactionDateObj,
-          month: currentMonth,
-          year: currentYear,
+          competenceMonth: currentMonth,
+          competenceYear: currentYear,
           isFixed: isFixed || false,
           isInstallment: false,
           totalInstallments: 1,
           installmentGroupId: null,
           isPaid: isPaid || false,
+          savingsBoxId: type === TransactionType.INVESTMENT ? savingsBoxId : null,
+          creditCardId,
+          paymentMethodId,
         });
 
         const saved = await this.transactionRepository.save(transaction);
         transactions.push(saved);
 
-        // Avança para o próximo mês
         currentMonth++;
         if (currentMonth > 12) {
           currentMonth = 1;
@@ -93,45 +110,59 @@ export class TransactionsService {
       return transactions;
     }
 
-    // Gera um grupo ID único para parcelas
     const installmentGroupId = isInstallment ? uuidv4() : null;
 
-    // Cria a transação principal
     const transaction = this.transactionRepository.create({
       userId,
       categoryId,
+      type,
       description,
       amount,
       transactionDate: new Date(transactionDate),
-      month,
-      year,
+      competenceMonth,
+      competenceYear,
       isFixed: isFixed || false,
       isInstallment: isInstallment || false,
       totalInstallments: totalInstallments || 1,
       installmentGroupId,
       isPaid: isPaid || false,
+      savingsBoxId: type === TransactionType.INVESTMENT ? savingsBoxId : null,
+      creditCardId,
+      paymentMethodId,
     });
 
     const savedTransaction = await this.transactionRepository.save(transaction);
 
-    // Se for parcelada, cria os registros individuais de parcelas
     if (isInstallment && totalInstallments && totalInstallments > 1) {
       await this.createInstallments(
         savedTransaction,
         userId,
         amount,
         totalInstallments,
-        month,
-        year,
+        competenceMonth,
+        competenceYear,
       );
+    }
+
+    if (type === TransactionType.INVESTMENT && savingsBoxId) {
+      await this.updateSavingsBoxBalance(savingsBoxId, userId, amount);
     }
 
     return this.findOne(savedTransaction.id, userId);
   }
 
-  /**
-   * Cria os registros individuais de parcelas para cada mês
-   */
+  private async updateSavingsBoxBalance(
+    savingsBoxId: string,
+    userId: string,
+    amount: number,
+  ): Promise<void> {
+    await this.savingsBoxRepository.increment(
+      { id: savingsBoxId, userId },
+      'balance',
+      amount,
+    );
+  }
+
   private async createInstallments(
     transaction: Transaction,
     userId: string,
@@ -155,13 +186,12 @@ export class TransactionsService {
         amount: parseFloat(installmentAmount.toFixed(2)),
         dueMonth: currentMonth,
         dueYear: currentYear,
-        isPaid: i === 1, // Primeira parcela já vem como paga (opcional)
+        isPaid: i === 1,
         paidAt: i === 1 ? new Date() : null,
       });
 
       installments.push(installment);
 
-      // Avança para o próximo mês
       currentMonth++;
       if (currentMonth > 12) {
         currentMonth = 1;
@@ -172,35 +202,34 @@ export class TransactionsService {
     await this.installmentRepository.save(installments);
   }
 
-  /**
-   * Busca todas as transações de um usuário
-   */
   async findAll(
     userId: string,
-    month?: number,
-    year?: number,
+    competenceMonth?: number,
+    competenceYear?: number,
+    type?: TransactionType,
   ): Promise<Transaction[]> {
     const where: any = { userId };
 
-    if (month && year) {
-      where.month = month;
-      where.year = year;
+    if (competenceMonth && competenceYear) {
+      where.competenceMonth = competenceMonth;
+      where.competenceYear = competenceYear;
+    }
+
+    if (type) {
+      where.type = type;
     }
 
     return this.transactionRepository.find({
       where,
-      relations: ['category', 'installments'],
+      relations: ['category', 'savingsBox', 'paymentMethod'],
       order: { transactionDate: 'DESC' },
     });
   }
 
-  /**
-   * Busca uma transação específica
-   */
   async findOne(id: string, userId: string): Promise<Transaction> {
     const transaction = await this.transactionRepository.findOne({
       where: { id, userId },
-      relations: ['category', 'installments'],
+      relations: ['category', 'savingsBox', 'installments'],
     });
 
     if (!transaction) {
@@ -210,9 +239,6 @@ export class TransactionsService {
     return transaction;
   }
 
-  /**
-   * Atualiza uma transação
-   */
   async update(
     id: string,
     updateTransactionDto: UpdateTransactionDto,
@@ -220,14 +246,15 @@ export class TransactionsService {
   ): Promise<Transaction> {
     const transaction = await this.findOne(id, userId);
 
-    // Se for parcelada, não permite alteração direta (deve excluir e recriar)
+    const oldSavingsBoxId = transaction.savingsBoxId;
+    const oldType = transaction.type;
+
     if (transaction.isInstallment && transaction.installments?.length > 0) {
       throw new BadRequestException(
         'Transações parceladas não podem ser editadas diretamente. Exclua e recrie a transação.',
       );
     }
 
-    // Atualiza os campos simples
     if (updateTransactionDto.categoryId) {
       const newCategory = await this.categoryRepository.findOne({
         where: { id: updateTransactionDto.categoryId },
@@ -237,30 +264,57 @@ export class TransactionsService {
         transaction.categoryId = newCategory.id;
       }
     }
-    
+
+    if (updateTransactionDto.type === TransactionType.INVESTMENT && updateTransactionDto.savingsBoxId) {
+      const savingsBox = await this.savingsBoxRepository.findOne({
+        where: { id: updateTransactionDto.savingsBoxId, userId },
+      });
+      if (!savingsBox) {
+        throw new NotFoundException('Caixa de ahorro não encontrado');
+      }
+    }
+
+    if (oldType === TransactionType.INVESTMENT && oldSavingsBoxId) {
+      await this.savingsBoxRepository.decrement(
+        { id: oldSavingsBoxId, userId },
+        'balance',
+        transaction.amount,
+      );
+    }
+
+    if (updateTransactionDto.type) transaction.type = updateTransactionDto.type;
     if (updateTransactionDto.description) transaction.description = updateTransactionDto.description;
     if (updateTransactionDto.amount) transaction.amount = updateTransactionDto.amount;
     if (updateTransactionDto.transactionDate) transaction.transactionDate = new Date(updateTransactionDto.transactionDate);
-    if (updateTransactionDto.month) transaction.month = updateTransactionDto.month;
-    if (updateTransactionDto.year) transaction.year = updateTransactionDto.year;
+    if (updateTransactionDto.competenceMonth) transaction.competenceMonth = updateTransactionDto.competenceMonth;
+    if (updateTransactionDto.competenceYear) transaction.competenceYear = updateTransactionDto.competenceYear;
     if (updateTransactionDto.isFixed !== undefined) transaction.isFixed = updateTransactionDto.isFixed;
     if (updateTransactionDto.isInstallment !== undefined) transaction.isInstallment = updateTransactionDto.isInstallment;
     if (updateTransactionDto.totalInstallments) transaction.totalInstallments = updateTransactionDto.totalInstallments;
     if (updateTransactionDto.isPaid !== undefined) transaction.isPaid = updateTransactionDto.isPaid;
+    if (updateTransactionDto.savingsBoxId !== undefined) transaction.savingsBoxId = updateTransactionDto.savingsBoxId;
+    if (updateTransactionDto.creditCardId !== undefined) transaction.creditCardId = updateTransactionDto.creditCardId;
 
     await this.transactionRepository.save(transaction);
-    
-    // Busca novamente para garantir que a relação está atualizada
+
+    if (transaction.type === TransactionType.INVESTMENT && transaction.savingsBoxId) {
+      await this.updateSavingsBoxBalance(transaction.savingsBoxId, userId, transaction.amount);
+    }
+
     return this.findOne(id, userId);
   }
 
-  /**
-   * Remove uma transação e suas parcelas associadas
-   */
   async remove(id: string, userId: string): Promise<void> {
     const transaction = await this.findOne(id, userId);
 
-    // Remove as parcelas associadas
+    if (transaction.type === TransactionType.INVESTMENT && transaction.savingsBoxId) {
+      await this.savingsBoxRepository.decrement(
+        { id: transaction.savingsBoxId, userId },
+        'balance',
+        transaction.amount,
+      );
+    }
+
     if (transaction.installments?.length > 0) {
       await this.installmentRepository.remove(transaction.installments);
     }
@@ -268,65 +322,243 @@ export class TransactionsService {
     await this.transactionRepository.remove(transaction);
   }
 
-  /**
-   * Obtém o resumo mensal com categorização 50/30/20
-   */
-  async getMonthlySummary(
+  async getMonthlyFinancialSummary(
     userId: string,
-    month: number,
-    year: number,
-  ): Promise<any> {
+    competenceMonth: number,
+    competenceYear: number,
+  ): Promise<{
+    totalIncome: number;
+    totalExpense: number;
+    totalInvestment: number;
+    balance: number;
+    byCategory: { categoryId: string; categoryName: string; categoryColor: string; total: number }[];
+    bySavingsBox: { savingsBoxId: string; savingsBoxName: string; savingsBoxColor: string; total: number }[];
+  }> {
     const transactions = await this.transactionRepository.find({
-      where: { userId, month, year },
+      where: {
+        userId,
+        competenceMonth,
+        competenceYear,
+      },
+      relations: ['category', 'savingsBox'],
+    });
+
+    const incomes = await this.incomeRepository.find({
+      where: {
+        userId,
+        month: competenceMonth,
+        year: competenceYear,
+      },
+    });
+
+    let totalIncome = incomes.reduce((sum, inc) => sum + Number(inc.amount), 0);
+    let totalExpense = 0;
+    let totalInvestment = 0;
+    const categoryMap = new Map<string, { categoryId: string; categoryName: string; categoryColor: string; total: number }>();
+    const savingsBoxMap = new Map<string, { savingsBoxId: string; savingsBoxName: string; savingsBoxColor: string; total: number }>();
+
+    for (const transaction of transactions) {
+      const amount = parseFloat(transaction.amount.toString());
+
+      if (transaction.type === TransactionType.INCOME) {
+        totalIncome += amount;
+      } else if (transaction.type === TransactionType.EXPENSE) {
+        totalExpense += amount;
+
+        const catKey = transaction.categoryId;
+        const existing = categoryMap.get(catKey);
+        if (existing) {
+          existing.total += amount;
+        } else {
+          categoryMap.set(catKey, {
+            categoryId: catKey,
+            categoryName: transaction.category?.name || 'Sem categoria',
+            categoryColor: transaction.category?.color || '#6b7280',
+            total: amount,
+          });
+        }
+      } else if (transaction.type === TransactionType.INVESTMENT) {
+        totalInvestment += amount;
+
+        if (transaction.savingsBoxId) {
+          const boxKey = transaction.savingsBoxId;
+          const existing = savingsBoxMap.get(boxKey);
+          if (existing) {
+            existing.total += amount;
+          } else {
+            savingsBoxMap.set(boxKey, {
+              savingsBoxId: boxKey,
+              savingsBoxName: transaction.savingsBox?.name || 'Sem caixa',
+              savingsBoxColor: transaction.savingsBox?.color || '#10b981',
+              total: amount,
+            });
+          }
+        }
+      }
+    }
+
+    return {
+      totalIncome: parseFloat(totalIncome.toFixed(2)),
+      totalExpense: parseFloat(totalExpense.toFixed(2)),
+      totalInvestment: parseFloat(totalInvestment.toFixed(2)),
+      balance: parseFloat((totalIncome - totalExpense - totalInvestment).toFixed(2)),
+      byCategory: Array.from(categoryMap.values()).sort((a, b) => b.total - a.total),
+      bySavingsBox: Array.from(savingsBoxMap.values()).sort((a, b) => b.total - a.total),
+    };
+  }
+
+  async getMonthlyComparison(
+    userId: string,
+    months: number = 12,
+    year: number,
+  ): Promise<{
+    month: number;
+    year: number;
+    monthName: string;
+    income: number;
+    expense: number;
+    investment: number;
+    balance: number;
+  }[]> {
+    const result = [];
+    const targetYear = year || new Date().getFullYear();
+
+    for (let m = 1; m <= months; m++) {
+      const summary = await this.getMonthlyFinancialSummary(userId, m, targetYear);
+
+      result.push({
+        month: m,
+        year: targetYear,
+        monthName: this.getMonthName(m),
+        income: summary.totalIncome,
+        expense: summary.totalExpense,
+        investment: summary.totalInvestment,
+        balance: summary.balance,
+      });
+    }
+
+    return result;
+  }
+
+  async getEvolutionLastMonths(
+    userId: string,
+    months: number = 12,
+    year: number,
+  ): Promise<{
+    month: number;
+    year: number;
+    monthName: string;
+    balance: number;
+  }[]> {
+    const result = [];
+    const targetYear = year || new Date().getFullYear();
+
+    for (let m = 1; m <= months; m++) {
+      const summary = await this.getMonthlyFinancialSummary(userId, m, targetYear);
+
+      result.push({
+        month: m,
+        year: targetYear,
+        monthName: this.getMonthName(m),
+        balance: summary.balance,
+      });
+    }
+
+    return result;
+  }
+
+  async getExpensesByCategory(
+    userId: string,
+    competenceMonth?: number,
+    competenceYear?: number,
+  ): Promise<{ categoryId: string; categoryName: string; categoryColor: string; total: number }[]> {
+    const where: any = { userId, type: TransactionType.EXPENSE };
+
+    if (competenceMonth && competenceYear) {
+      where.competenceMonth = competenceMonth;
+      where.competenceYear = competenceYear;
+    }
+
+    const transactions = await this.transactionRepository.find({
+      where,
       relations: ['category'],
     });
 
-    const summary = {
-      essential: { total: 0, percentage: 0, transactions: [] },
-      lifestyle: { total: 0, percentage: 0, transactions: [] },
-      debtsInvestments: { total: 0, percentage: 0, transactions: [] },
-      total: 0,
-    };
+    const categoryMap = new Map<string, { categoryId: string; categoryName: string; categoryColor: string; total: number }>();
 
-    transactions.forEach((transaction) => {
+    for (const transaction of transactions) {
       const amount = parseFloat(transaction.amount.toString());
-      summary.total += amount;
+      const catKey = transaction.categoryId;
+      const existing = categoryMap.get(catKey);
 
-      switch (transaction.category.type) {
-        case CategoryType.ESSENTIAL:
-          summary.essential.total += amount;
-          summary.essential.transactions.push(transaction);
-          break;
-        case CategoryType.LIFESTYLE:
-          summary.lifestyle.total += amount;
-          summary.lifestyle.transactions.push(transaction);
-          break;
-        case CategoryType.DEBTS_INVESTMENTS:
-          summary.debtsInvestments.total += amount;
-          summary.debtsInvestments.transactions.push(transaction);
-          break;
+      if (existing) {
+        existing.total += amount;
+      } else {
+        categoryMap.set(catKey, {
+          categoryId: catKey,
+          categoryName: transaction.category?.name || 'Sem categoria',
+          categoryColor: transaction.category?.color || '#6b7280',
+          total: amount,
+        });
       }
-    });
-
-    // Calcula as porcentagens
-    if (summary.total > 0) {
-      summary.essential.percentage = parseFloat(
-        ((summary.essential.total / summary.total) * 100).toFixed(2),
-      );
-      summary.lifestyle.percentage = parseFloat(
-        ((summary.lifestyle.total / summary.total) * 100).toFixed(2),
-      );
-      summary.debtsInvestments.percentage = parseFloat(
-        ((summary.debtsInvestments.total / summary.total) * 100).toFixed(2),
-      );
     }
 
-    return summary;
+    return Array.from(categoryMap.values())
+      .map((item) => ({ ...item, total: parseFloat(item.total.toFixed(2)) }))
+      .sort((a, b) => b.total - a.total);
   }
 
-  /**
-   * Obtém a projeção de gastos para os próximos meses
-   */
+  async getInvestmentsBySavingsBox(
+    userId: string,
+    competenceMonth?: number,
+    competenceYear?: number,
+  ): Promise<{ savingsBoxId: string; savingsBoxName: string; savingsBoxColor: string; total: number }[]> {
+    const where: any = { userId, type: TransactionType.INVESTMENT };
+
+    if (competenceMonth && competenceYear) {
+      where.competenceMonth = competenceMonth;
+      where.competenceYear = competenceYear;
+    }
+
+    const transactions = await this.transactionRepository.find({
+      where,
+      relations: ['savingsBox'],
+    });
+
+    const savingsBoxMap = new Map<string, { savingsBoxId: string; savingsBoxName: string; savingsBoxColor: string; total: number }>();
+
+    for (const transaction of transactions) {
+      if (!transaction.savingsBoxId) continue;
+
+      const amount = parseFloat(transaction.amount.toString());
+      const boxKey = transaction.savingsBoxId;
+      const existing = savingsBoxMap.get(boxKey);
+
+      if (existing) {
+        existing.total += amount;
+      } else {
+        savingsBoxMap.set(boxKey, {
+          savingsBoxId: boxKey,
+          savingsBoxName: transaction.savingsBox?.name || 'Sem caixa',
+          savingsBoxColor: transaction.savingsBox?.color || '#10b981',
+          total: amount,
+        });
+      }
+    }
+
+    return Array.from(savingsBoxMap.values())
+      .map((item) => ({ ...item, total: parseFloat(item.total.toFixed(2)) }))
+      .sort((a, b) => b.total - a.total);
+  }
+
+  private getMonthName(month: number): string {
+    const months = [
+      'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez',
+    ];
+    return months[month - 1];
+  }
+
   async getProjection(userId: string, months: number): Promise<any[]> {
     const projections = [];
     const today = new Date();
@@ -334,7 +566,6 @@ export class TransactionsService {
     let currentYear = today.getFullYear();
 
     for (let i = 0; i < months; i++) {
-      // Busca parcelas pendentes para o mês
       const installments = await this.installmentRepository.find({
         where: {
           userId,
@@ -344,13 +575,12 @@ export class TransactionsService {
         relations: ['transaction', 'transaction.category'],
       });
 
-      // Busca transações fixas do mês
       const fixedTransactions = await this.transactionRepository.find({
         where: {
           userId,
           isFixed: true,
-          month: currentMonth,
-          year: currentYear,
+          competenceMonth: currentMonth,
+          competenceYear: currentYear,
         },
         relations: ['category'],
       });
@@ -372,25 +602,8 @@ export class TransactionsService {
         installmentTotal,
         fixedTotal,
         total: installmentTotal + fixedTotal,
-        installments: installments.map((inst) => ({
-          id: inst.id,
-          description: inst.transaction.description,
-          amount: inst.amount,
-          installmentNumber: inst.installmentNumber,
-          totalInstallments: inst.totalInstallments,
-          category: inst.transaction.category.name,
-          categoryType: inst.transaction.category.type,
-        })),
-        fixedTransactions: fixedTransactions.map((t) => ({
-          id: t.id,
-          description: t.description,
-          amount: t.amount,
-          category: t.category.name,
-          categoryType: t.category.type,
-        })),
       });
 
-      // Avança para o próximo mês
       currentMonth++;
       if (currentMonth > 12) {
         currentMonth = 1;
@@ -399,127 +612,5 @@ export class TransactionsService {
     }
 
     return projections;
-  }
-
-  private getMonthName(month: number): string {
-    const months = [
-      'Janeiro',
-      'Fevereiro',
-      'Março',
-      'Abril',
-      'Maio',
-      'Junho',
-      'Julho',
-      'Agosto',
-      'Setembro',
-      'Outubro',
-      'Novembro',
-      'Dezembro',
-    ];
-    return months[month - 1];
-  }
-
-  /**
-   * Calcula o "Card de Realidade" - Saldo disponível real
-   */
-  async getRealityCard(
-    userId: string,
-    month: number,
-    year: number,
-    netSalary: number,
-  ): Promise<any> {
-    // Busca parcelas pendentes do mês
-    const pendingInstallments = await this.installmentRepository.find({
-      where: {
-        userId,
-        dueMonth: month,
-        dueYear: year,
-        isPaid: false,
-      },
-    });
-
-    // Busca contas fixas do mês
-    const fixedTransactions = await this.transactionRepository.find({
-      where: {
-        userId,
-        isFixed: true,
-        month,
-        year,
-      },
-    });
-
-    const installmentsTotal = pendingInstallments.reduce(
-      (sum, inst) => sum + parseFloat(inst.amount.toString()),
-      0,
-    );
-
-    const fixedTotal = fixedTransactions.reduce(
-      (sum, t) => sum + parseFloat(t.amount.toString()),
-      0,
-    );
-
-    const totalCommitments = installmentsTotal + fixedTotal;
-    const availableBalance = netSalary - totalCommitments;
-
-    return {
-      netSalary,
-      installmentsTotal,
-      fixedTotal,
-      totalCommitments,
-      availableBalance,
-      pendingInstallmentsCount: pendingInstallments.length,
-      percentageCommitted: parseFloat(
-        ((totalCommitments / netSalary) * 100).toFixed(2),
-      ),
-      percentageAvailable: parseFloat(
-        ((availableBalance / netSalary) * 100).toFixed(2),
-      ),
-    };
-  }
-
-  async getByCategory(
-    userId: string,
-    month?: number,
-    year?: number,
-  ): Promise<any[]> {
-    const where: any = { userId };
-
-    if (month && year) {
-      where.month = month;
-      where.year = year;
-    }
-
-    const transactions = await this.transactionRepository.find({
-      where,
-      relations: ['category'],
-    });
-
-    const categoryMap = new Map<string, { 
-      name: string; 
-      type: string; 
-      color: string;
-      total: number;
-      count: number;
-    }>();
-
-    transactions.forEach((t) => {
-      const existing = categoryMap.get(t.categoryId);
-      const amount = parseFloat(t.amount.toString());
-      
-      if (existing) {
-        existing.total += amount;
-        existing.count += 1;
-      } else {
-        categoryMap.set(t.categoryId, {
-          name: t.category.name,
-          type: t.category.type,
-          color: t.category.color,
-          total: amount,
-          count: 1,
-        });
-      }
-    });
-
-    return Array.from(categoryMap.values()).sort((a, b) => b.total - a.total);
   }
 }

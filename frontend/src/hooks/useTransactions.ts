@@ -1,22 +1,25 @@
 import { useState, useCallback } from 'react';
-import { transactionService, CreateTransactionData, CategorySummary } from '@/services/transaction.service';
-import { Transaction, MonthlySummary, ProjectionData } from '@/types';
+import { transactionService, CreateTransactionData } from '@/services/transaction.service';
+import { Transaction, MonthlyFinancialSummary, ProjectionData } from '@/types';
 
-// ============================================
-// HOOK DE TRANSAÇÕES
-// ============================================
+interface CategoryExpenseData {
+  categoryId: string;
+  categoryName: string;
+  categoryColor: string;
+  total: number;
+}
 
 interface UseTransactionsReturn {
   transactions: Transaction[];
-  summary: MonthlySummary | null;
+  summary: MonthlyFinancialSummary | null;
   projection: ProjectionData[];
-  categorySummary: CategorySummary[];
+  categoryExpenses: CategoryExpenseData[];
   isLoading: boolean;
   error: string | null;
-  fetchTransactions: (month?: number, year?: number) => Promise<void>;
+  fetchTransactions: (month?: number, year?: number, type?: string) => Promise<void>;
   fetchSummary: (month: number, year: number) => Promise<void>;
   fetchProjection: (months?: number) => Promise<void>;
-  fetchCategorySummary: (month?: number, year?: number) => Promise<void>;
+  fetchCategoryExpenses: (month?: number, year?: number) => Promise<void>;
   createTransaction: (data: CreateTransactionData) => Promise<void>;
   updateTransaction: (id: string, data: Partial<CreateTransactionData>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
@@ -24,17 +27,17 @@ interface UseTransactionsReturn {
 
 export function useTransactions(): UseTransactionsReturn {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [summary, setSummary] = useState<MonthlySummary | null>(null);
+  const [summary, setSummary] = useState<MonthlyFinancialSummary | null>(null);
   const [projection, setProjection] = useState<ProjectionData[]>([]);
-  const [categorySummary, setCategorySummary] = useState<CategorySummary[]>([]);
+  const [categoryExpenses, setCategoryExpenses] = useState<CategoryExpenseData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTransactions = useCallback(async (month?: number, year?: number) => {
+  const fetchTransactions = useCallback(async (month?: number, year?: number, type?: string) => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await transactionService.getAll(month, year);
+      const data = await transactionService.getAll(month, year, type as any);
       setTransactions(data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erro ao carregar transações');
@@ -69,14 +72,14 @@ export function useTransactions(): UseTransactionsReturn {
     }
   }, []);
 
-  const fetchCategorySummary = useCallback(async (month?: number, year?: number) => {
+  const fetchCategoryExpenses = useCallback(async (month?: number, year?: number) => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await transactionService.getByCategory(month, year);
-      setCategorySummary(data);
+      const data = await transactionService.getExpensesByCategory(month, year);
+      setCategoryExpenses(data);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao carregar por categoria');
+      setError(err.response?.data?.message || 'Erro ao carregar gastos por categoria');
     } finally {
       setIsLoading(false);
     }
@@ -126,13 +129,13 @@ export function useTransactions(): UseTransactionsReturn {
     transactions,
     summary,
     projection,
-    categorySummary,
+    categoryExpenses,
     isLoading,
     error,
     fetchTransactions,
     fetchSummary,
     fetchProjection,
-    fetchCategorySummary,
+    fetchCategoryExpenses,
     createTransaction,
     updateTransaction,
     deleteTransaction,

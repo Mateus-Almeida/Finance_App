@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Category, Transaction } from '@/types';
+import { Category, Transaction, TransactionType, PaymentMethod } from '@/types';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,19 +10,22 @@ interface CreateTransactionModalProps {
   open: boolean;
   onClose: () => void;
   categories: Category[];
+  paymentMethods: PaymentMethod[];
   onSubmit: (payload: {
     categoryId: string;
+    type: TransactionType;
     description: string;
     amount: number;
     transactionDate: string;
-    month: number;
-    year: number;
+    competenceMonth: number;
+    competenceYear: number;
     isFixed: boolean;
     isInstallment: boolean;
     totalInstallments: number;
     repeatMonthly: boolean;
     repeatMonths: number;
     isPaid?: boolean;
+    paymentMethodId?: string;
   }) => Promise<void>;
   isSubmitting: boolean;
   editTransaction?: Transaction | null;
@@ -32,11 +35,13 @@ export function CreateTransactionModal({
   open,
   onClose,
   categories,
+  paymentMethods,
   onSubmit,
   isSubmitting,
   editTransaction,
 }: CreateTransactionModalProps) {
   const [form, setForm] = useState({
+    type: TransactionType.EXPENSE,
     categoryId: '',
     description: '',
     amount: '',
@@ -47,6 +52,7 @@ export function CreateTransactionModal({
     repeatMonthly: false,
     repeatMonths: 1,
     isPaid: false,
+    paymentMethodId: '',
   });
 
   const parseDateForInput = (dateString: string | Date): string => {
@@ -75,6 +81,7 @@ export function CreateTransactionModal({
   useEffect(() => {
     if (!open) {
       setForm({
+        type: TransactionType.EXPENSE,
         categoryId: categories[0]?.id || '',
         description: '',
         amount: '',
@@ -85,14 +92,16 @@ export function CreateTransactionModal({
         repeatMonthly: false,
         repeatMonths: 1,
         isPaid: false,
+        paymentMethodId: paymentMethods[0]?.id || '',
       });
     }
-  }, [open, categories]);
+  }, [open, categories, paymentMethods]);
 
   useEffect(() => {
     if (open) {
       if (editTransaction) {
         setForm({
+          type: editTransaction.type || TransactionType.EXPENSE,
           categoryId: editTransaction.categoryId || categories[0]?.id || '',
           description: editTransaction.description,
           amount: String(editTransaction.amount),
@@ -103,9 +112,10 @@ export function CreateTransactionModal({
           repeatMonthly: false,
           repeatMonths: 1,
           isPaid: editTransaction.isPaid || false,
+          paymentMethodId: editTransaction.paymentMethodId || paymentMethods[0]?.id || '',
         });
       } else if (categories.length > 0 && !form.categoryId) {
-        setForm((prev) => ({ ...prev, categoryId: categories[0].id }));
+        setForm((prev) => ({ ...prev, categoryId: categories[0].id, paymentMethodId: paymentMethods[0]?.id || '' }));
       }
     }
   }, [editTransaction, categories, open]);
@@ -133,22 +143,25 @@ export function CreateTransactionModal({
     }
 
     const payload = {
+      type: form.type,
       categoryId: form.categoryId,
       description: form.description,
       amount: Number(form.amount),
       transactionDate: form.transactionDate,
-      month: parseInt(form.transactionDate.split('-')[1]),
-      year: parseInt(form.transactionDate.split('-')[0]),
+      competenceMonth: parseInt(form.transactionDate.split('-')[1]),
+      competenceYear: parseInt(form.transactionDate.split('-')[0]),
       isFixed: form.isFixed,
       isInstallment: form.isInstallment,
       totalInstallments: form.isInstallment ? form.totalInstallments : 1,
       repeatMonthly: form.repeatMonthly,
       repeatMonths: form.repeatMonthly ? form.repeatMonths : 1,
       isPaid: form.isPaid,
+      paymentMethodId: form.paymentMethodId || undefined,
     };
 
     await onSubmit(payload);
     setForm({
+      type: TransactionType.EXPENSE,
       categoryId: categories[0]?.id ?? '',
       description: '',
       amount: '',
@@ -159,6 +172,7 @@ export function CreateTransactionModal({
       repeatMonthly: false,
       repeatMonths: 1,
       isPaid: false,
+      paymentMethodId: paymentMethods[0]?.id ?? '',
     });
     onClose();
   };
@@ -178,6 +192,19 @@ export function CreateTransactionModal({
       }
     >
       <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="type">Tipo</Label>
+          <select
+            id="type"
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            value={form.type}
+            onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value as TransactionType }))}
+          >
+            <option value={TransactionType.EXPENSE}>Despesa</option>
+            <option value={TransactionType.INCOME}>Receita</option>
+            <option value={TransactionType.INVESTMENT}>Investimento</option>
+          </select>
+        </div>
         <div className="space-y-2">
           <Label htmlFor="description">Descrição</Label>
           <Input
@@ -224,6 +251,25 @@ export function CreateTransactionModal({
               onChange={(e) => setForm((prev) => ({ ...prev, transactionDate: e.target.value }))}
             />
           </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="paymentMethod">Meio de pagamento</Label>
+          <select
+            id="paymentMethod"
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            value={form.paymentMethodId}
+            onChange={(e) => setForm((prev) => ({ ...prev, paymentMethodId: e.target.value }))}
+          >
+            {paymentMethods.length === 0 ? (
+              <option value="">Nenhum meio de pagamento</option>
+            ) : (
+              paymentMethods.map((pm) => (
+                <option key={pm.id} value={pm.id}>
+                  {pm.name} ({pm.type})
+                </option>
+              ))
+            )}
+          </select>
         </div>
       </div>
 

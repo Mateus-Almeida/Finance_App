@@ -1,36 +1,35 @@
 import api from './api';
-import { Transaction, MonthlySummary, ProjectionData } from '@/types';
-
-// ============================================
-// SERVIÇO DE TRANSAÇÕES
-// ============================================
+import { Transaction, MonthlyFinancialSummary, ProjectionData, MonthlyComparison, EvolutionData, TransactionType } from '@/types';
 
 export interface CreateTransactionData {
   categoryId: string;
+  type: TransactionType;
   description: string;
   amount: number;
   transactionDate: string;
-  month: number;
-  year: number;
+  competenceMonth: number;
+  competenceYear: number;
   isFixed?: boolean;
   isInstallment?: boolean;
   totalInstallments?: number;
   repeatMonthly?: boolean;
   repeatMonths?: number;
   isPaid?: boolean;
-}
-
-export interface CategorySummary {
-  name: string;
-  type: string;
-  color: string;
-  total: number;
-  count: number;
+  savingsBoxId?: string;
+  creditCardId?: string;
+  paymentMethodId?: string;
 }
 
 export const transactionService = {
-  async getAll(month?: number, year?: number): Promise<Transaction[]> {
-    const params: any = month && year ? { month, year } : {};
+  async getAll(month?: number, year?: number, type?: TransactionType): Promise<Transaction[]> {
+    const params: any = {};
+    if (month && year) {
+      params.month = month;
+      params.year = year;
+    }
+    if (type) {
+      params.type = type;
+    }
     const response = await api.get('/transactions', { params });
     return response.data;
   },
@@ -54,10 +53,48 @@ export const transactionService = {
     await api.delete(`/transactions/${id}`);
   },
 
-  async getMonthlySummary(month: number, year: number): Promise<MonthlySummary> {
+  async getMonthlySummary(month: number, year: number): Promise<MonthlyFinancialSummary> {
     const response = await api.get('/transactions/summary', {
       params: { month, year },
     });
+    return response.data;
+  },
+
+  async getMonthlyComparison(months: number = 12, year?: number): Promise<MonthlyComparison[]> {
+    const params: any = { months };
+    if (year) {
+      params.year = year;
+    }
+    const response = await api.get('/transactions/monthly-comparison', { params });
+    return response.data;
+  },
+
+  async getEvolution(months: number = 12, year?: number): Promise<EvolutionData[]> {
+    const params: any = { months };
+    if (year) {
+      params.year = year;
+    }
+    const response = await api.get('/transactions/evolution', { params });
+    return response.data;
+  },
+
+  async getExpensesByCategory(month?: number, year?: number): Promise<{ categoryId: string; categoryName: string; categoryColor: string; total: number }[]> {
+    const params: any = {};
+    if (month && year) {
+      params.month = month;
+      params.year = year;
+    }
+    const response = await api.get('/transactions/by-category', { params });
+    return response.data;
+  },
+
+  async getInvestmentsBySavingsBox(month?: number, year?: number): Promise<{ savingsBoxId: string; savingsBoxName: string; savingsBoxColor: string; total: number }[]> {
+    const params: any = {};
+    if (month && year) {
+      params.month = month;
+      params.year = year;
+    }
+    const response = await api.get('/transactions/by-savings-box', { params });
     return response.data;
   },
 
@@ -65,16 +102,6 @@ export const transactionService = {
     const response = await api.get('/transactions/projection', {
       params: { months },
     });
-    return response.data;
-  },
-
-  async getByCategory(month?: number, year?: number): Promise<CategorySummary[]> {
-    const params: any = {};
-    if (month && year) {
-      params.month = month;
-      params.year = year;
-    }
-    const response = await api.get('/transactions/by-category', { params });
     return response.data;
   },
 };
